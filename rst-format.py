@@ -22,6 +22,8 @@ class TocTree(sphinx.directives.TocTree):
 
 class XRefRole(sphinx.roles.XRefRole):
     def run(self):
+        # TODO Actually need to handle the case where the title and target are
+        # both specified but equal.
         return (
             [
                 docutils.nodes.reference(
@@ -111,13 +113,23 @@ class FormatVisitor(docutils.nodes.GenericNodeVisitor):
 #         show_node(c, depth + 1)
 
 
-FormatContext = namedtuple("FormatContext", ["section_depth", "indent_depth"])
+FormatContext = namedtuple("FormatContext", ["section_depth", "width"])
 section_chars = '=-~^"'
 
 
 def wrap_text(width, text):
-    # TODO
-    return text
+    buf = []
+    n = 0
+    for w in text.split():
+        n2 = n + bool(buf) + len(w)
+        if n2 > width:
+            yield " ".join(buf)
+            buf = []
+            n2 = len(w)
+        buf.append(w)
+        n = n2
+    if buf:
+        yield " ".join(buf)
 
 
 def fmt_children(node, ctx):
@@ -136,6 +148,18 @@ def intersperse(val, it):
         yield x
 
 
+chain = itertools.chain.from_iterable
+
+
+def chain_intersperse(val, it):
+    first = True
+    for x in it:
+        if not first:
+            yield val
+        first = False
+        yield from x
+
+
 def with_spaces(n, lines):
     s = " " * n
     for l in lines:
@@ -143,69 +167,129 @@ def with_spaces(n, lines):
 
 
 class Formatters:
+    # Basic formatting.
+    @staticmethod
+    def substitution_reference(node, ctx: FormatContext):
+        yield "\\ |" + "".join(chain(fmt_children(node, ctx))) + "|\\ "
+
     @staticmethod
     def emphasis(node, ctx: FormatContext):
-        return "*" + "".join(fmt_children(node, ctx)) + "*"
+        yield "*" + "".join(chain(fmt_children(node, ctx))) + "*"
 
     @staticmethod
     def strong(node, ctx: FormatContext):
-        return "**" + "".join(fmt_children(node, ctx)) + "**"
+        yield "**" + "".join(chain(fmt_children(node, ctx))) + "**"
 
     @staticmethod
-    def substitution_reference(node, ctx: FormatContext):
-        return "\\ |" + "".join(fmt_children(node, ctx)) + "|\\ "
+    def literal(node, ctx: FormatContext):
+        yield "``" + "".join(chain(fmt_children(node, ctx))) + "``"
 
-    @staticmethod
-    def Text(node, _: FormatContext):
-        return node.astext()
-
-    @staticmethod
-    def paragraph(node, ctx: FormatContext):
-        return wrap_text(WIDTH - 3 * ctx.indent_depth, "".join(fmt_children(node, ctx)))
-
+    # Lists.
     @staticmethod
     def bullet_list(node, ctx: FormatContext):
-        return "\n".join("- " + fmt(c, ctx) for c in node.children)
+        for c in node.children:
+            assert isinstance(c, docutils.nodes.list_item)
+            f = fmt(c, ctx._replace(width=ctx.width - 2))
+            yield "- " + next(f)
+            yield from with_spaces(2, f)
+
+    @staticmethod
+    def enumerated_list(node, ctx: FormatContext):
+        for c in node.children:
+            assert isinstance(c, docutils.nodes.list_item)
+            f = fmt(c, ctx._replace(width=ctx.width - 2))
+            yield "#. " + next(f)
+            yield from with_spaces(3, f)
 
     @staticmethod
     def list_item(node, ctx: FormatContext):
-        return "\n\n".join(fmt_children(node, ctx))
+        yield from chain_intersperse("", fmt_children(node, ctx))
+
+    @staticmethod
+    def term(node, ctx: FormatContext):
+        yield "".join(chain(fmt_children(node, ctx)))
+
+    @staticmethod
+    def definition(node, ctx: FormatContext):
+        yield from chain_intersperse("", fmt_children(node, ctx))
+
+    @staticmethod
+    def definition_list_item(node, ctx: FormatContext):
+        for c in node.children:
+            if isinstance(c, docutils.nodes.term):
+                yield from fmt(c, ctx)
+            elif isinstance(c, docutils.nodes.definition):
+                yield from with_spaces(3, fmt(c, ctx))
+
+    @staticmethod
+    def definition_list(node, ctx: FormatContext):
+        yield from chain_intersperse("", fmt_children(node, ctx))
+
+    # Structure.
+    @staticmethod
+    def paragraph(node, ctx: FormatContext):
+        yield from wrap_text(ctx.width, "".join(chain(fmt_children(node, ctx))))
+
+    @staticmethod
+    def title(node, ctx: FormatContext):
+        text = "".join(chain(fmt(c, ctx) for c in node.children))
+        yield text
+        yield section_chars[ctx.section_depth - 1] * len(text)
+
+    @staticmethod
+    def section(node, ctx: FormatContext):
+        yield from chain_intersperse(
+            "", fmt_children(node, ctx._replace(section_depth=ctx.section_depth + 1))
+        )
+
+    @staticmethod
+    def document(node, ctx):
+        yield from chain_intersperse("", fmt_children(node, ctx))
+
+    # Misc.
+    @staticmethod
+    def Text(node, _: FormatContext):
+        yield node.astext()
 
     @staticmethod
     def reference(node, ctx: FormatContext):
         if "refuri" in node.attributes:
             title = node.children[0].astext()
             uri = node.attributes["refuri"]
-            return f"`{title} <{uri}>`_"
-        print(node.children)
-        print(node.attributes)
+            yield f"`{title} <{uri}>`_"
+            return
         title, target = (c.astext() for c in node.children)
         if title == target:
-            return f":ref:`{target}`"
-        return f":ref:`{title} <{target}>`"
+            yield f":ref:`{target}`"
+        else:
+            yield f":ref:`{title} <{target}>`"
 
     @staticmethod
     def target(node, ctx: FormatContext):
-        return ""
+        yield from []
 
     @staticmethod
-    def title(node, ctx: FormatContext):
-        text = "".join(fmt_children(node, ctx))
-        return text + "\n" + section_chars[ctx.section_depth - 1] * len(text)
+    def comment(node, ctx: FormatContext):
+        yield ".."
+        text = "\n".join(chain(fmt_children(node, ctx)))
+        yield from with_spaces(3, text.split("\n"))
 
     @staticmethod
-    def section(node, ctx: FormatContext):
-        return "\n\n".join(
-            fmt_children(node, ctx._replace(section_depth=ctx.section_depth + 1))
-        )
-
-    @staticmethod
-    def document(node, ctx):
-        return "\n\n".join(fmt_children(node, ctx))
+    def literal_block(node, ctx: FormatContext):
+        # TODO put the right thing here
+        yield ".. code::"
+        yield ""
+        text = "\n".join(chain(fmt_children(node, ctx)))
+        yield from with_spaces(3, text.split("\n"))
 
 
 def fmt(node, ctx: FormatContext):
-    func = getattr(Formatters, type(node).__name__, lambda *args: "")
+    func = getattr(
+        Formatters,
+        type(node).__name__,
+        lambda _, __: ["\x1b[33m{}\x1b[m".format(type(node).__name__.upper())],
+    )
+    # print(type(node).__name__, list(func(node, ctx)))
     return func(node, ctx)
 
 
@@ -218,7 +302,11 @@ def main(args):
 
     parser = docutils.parsers.rst.Parser()
 
+    quiet = False
     for fn in args:
+        if fn == "-q":
+            quiet = True
+            continue
         doc = docutils.utils.new_document(
             "",
             settings=docutils.frontend.OptionParser(
@@ -227,11 +315,12 @@ def main(args):
         )
         parser.parse(open(fn).read(), doc)
 
-        print("=" * 60, fn)
-        doc.walkabout(DumpVisitor(doc))
-        # doc.walkabout(FormatVisitor(doc))
+        if not quiet:
+            print("=" * 60, fn)
+            doc.walkabout(DumpVisitor(doc))
+            # doc.walkabout(FormatVisitor(doc))
 
-        print(fmt(doc, FormatContext(0, 0)))
+        print("\n".join(fmt(doc, FormatContext(0, WIDTH))))
 
 
 if __name__ == "__main__":
