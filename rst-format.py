@@ -15,9 +15,14 @@ class RefNode(docutils.nodes.Element):
     pass
 
 
-class TocTree(sphinx.directives.TocTree):
+class toctree(docutils.nodes.Element):
+    def __init__(self, directive):
+        super().__init__("", directive=directive)
+
+
+class toctree_dir(sphinx.directives.TocTree):
     def run(self):
-        return []
+        return [toctree(self)]
 
 
 class XRefRole(sphinx.roles.XRefRole):
@@ -34,6 +39,9 @@ class XRefRole(sphinx.roles.XRefRole):
             ],
             [],
         )
+
+
+docutils.nodes._add_node_class_names(["toctree"])
 
 
 class DumpVisitor(docutils.nodes.GenericNodeVisitor):
@@ -106,7 +114,7 @@ def chain_intersperse(val, it):
 def with_spaces(n, lines):
     s = " " * n
     for l in lines:
-        yield s + l
+        yield s + l if l else l
 
 
 class Formatters:
@@ -180,6 +188,17 @@ class Formatters:
         yield section_chars[ctx.section_depth - 1] * len(text)
 
     @staticmethod
+    def toctree(node, ctx: FormatContext):
+        d = node.attributes["directive"]
+        # TODO: args?
+        yield f".. {d.name}::"
+        # Just rely on the order being stable, hopefully.
+        for k, v in d.options.items():
+            yield f"   :{k}:" if v is None else f"   :{k}: {v}"
+        yield ""
+        yield from with_spaces(3, d.content)
+
+    @staticmethod
     def section(node, ctx: FormatContext):
         yield from chain_intersperse(
             "", fmt_children(node, ctx._replace(section_depth=ctx.section_depth + 1))
@@ -218,6 +237,20 @@ class Formatters:
         yield from with_spaces(3, text.split("\n"))
 
     @staticmethod
+    def note(node, ctx: FormatContext):
+        yield ".. note::"
+        yield ""
+        text = "\n".join(chain(fmt_children(node, ctx)))
+        yield from with_spaces(3, text.split("\n"))
+
+    @staticmethod
+    def warning(node, ctx: FormatContext):
+        yield ".. warning::"
+        yield ""
+        text = "\n".join(chain(fmt_children(node, ctx)))
+        yield from with_spaces(3, text.split("\n"))
+
+    @staticmethod
     def literal_block(node, ctx: FormatContext):
         # TODO put the right thing here
         yield ".. code::"
@@ -230,14 +263,14 @@ def fmt(node, ctx: FormatContext):
     func = getattr(
         Formatters,
         type(node).__name__,
-        lambda _, __: ["\x1b[33m{}\x1b[m".format(type(node).__name__.upper())],
+        lambda _, __: ["\x1b[35m{}\x1b[m".format(type(node).__name__.upper())],
     )
     # print(type(node).__name__, list(func(node, ctx)))
     return func(node, ctx)
 
 
 def main(args):
-    directives.register_directive("toctree", TocTree)
+    directives.register_directive("toctree", toctree_dir)
 
     roles.register_local_role("class", XRefRole())
     roles.register_local_role("download", XRefRole())
