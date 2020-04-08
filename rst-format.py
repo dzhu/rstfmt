@@ -56,63 +56,6 @@ class DumpVisitor(docutils.nodes.GenericNodeVisitor):
         self.depth -= 1
 
 
-class FormatVisitor(docutils.nodes.GenericNodeVisitor):
-    section_chars = '=-~^"'
-
-    def __init__(self, document):
-        super().__init__(document)
-        self.section_depth = -1
-        self.buf = []
-
-    def visit_Text(self, node):
-        self.buf.append(node.astext())
-
-    def visit_substitution_reference(self, _):
-        self.buf.append("\\ |")
-
-    def depart_substitution_reference(self, _):
-        self.buf.append("|\\ ")
-
-    def visit_section(self, _):
-        self.section_depth += 1
-
-    def depart_section(self, _):
-        self.section_depth -= 1
-
-    def visit_title(self, _):
-        if self.buf:
-            print("WARNING: non-empty buf on visiting title", self.buf, file=sys.stderr)
-        self.buf = []
-
-    def depart_title(self, _):
-        text = "".join(self.buf)
-        self.buf = []
-        print(text)
-        print(self.section_chars[self.section_depth] * len(text))
-        print()
-
-    def visit_strong(self, _):
-        self.buf.append("*")
-
-    def depart_strong(self, _):
-        self.buf.append("*")
-
-    def default_visit(self, node):
-        pass
-
-    def default_departure(self, node):
-        pass
-
-
-# def show_node(node, depth=0):
-#     print("    " * depth + "- " + type(node).__name__, end="")
-#     if isinstance(node, docutils.nodes.Text):
-#         print(" " + repr(node.astext()[:100]), end="")
-#     print()
-#     for c in node.children:
-#         show_node(c, depth + 1)
-
-
 FormatContext = namedtuple("FormatContext", ["section_depth", "width"])
 section_chars = '=-~^"'
 
