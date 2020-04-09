@@ -18,21 +18,19 @@ import sphinx.ext.autodoc.directive
 # Handle directives by inserting them into the tree unparsed.
 
 
+def register_node(cls):
+    docutils.nodes._add_node_class_names([cls.__name__])
+    return cls
+
+
+@register_node
 class directive(docutils.nodes.Element):
-    def __init__(self, d):
-        super().__init__("", directive=d)
-        print(d.name)
-        print(d.arguments)
-        print(d.options)
-        print(d.content)
-
-
-docutils.nodes._add_node_class_names(["directive"])
+    pass
 
 
 class generic_directive(docutils.parsers.rst.Directive):
     def run(self):
-        return [directive(self)]
+        return [directive(directive=self)]
 
 
 # Add support for common directives.
@@ -44,7 +42,7 @@ def identity(x):
 
 def register_directive(name):
     def proc(cls):
-        print(cls.option_spec)
+        # Make sure all arguments are passed through without change.
         cls.option_spec = {k: identity for k in cls.option_spec}
         directives.register_directive(name, cls)
 
@@ -84,20 +82,14 @@ except ImportError:
     pass
 
 
+@register_node
+class xref(docutils.nodes.Element):
+    pass
+
+
 class XRefRole(sphinx.roles.XRefRole):
     def run(self):
-        # TODO Actually need to handle the case where the title and target are
-        # both specified but equal.
-        return (
-            [
-                docutils.nodes.reference(
-                    "",
-                    docutils.nodes.Text(self.title),
-                    docutils.nodes.Text(self.target),
-                )
-            ],
-            [],
-        )
+        return [xref(text=self.rawtext)], []
 
 
 class DumpVisitor(docutils.nodes.GenericNodeVisitor):
@@ -307,6 +299,10 @@ class Formatters:
             yield f":ref:`{title} <{target}>`"
 
     @staticmethod
+    def xref(node, ctx: FormatContext):
+        yield node.attributes["text"]
+
+    @staticmethod
     def inline(node, ctx: FormatContext):
         yield from chain(fmt_children(node, ctx))
 
@@ -337,7 +333,6 @@ class Formatters:
 
     @staticmethod
     def literal_block(node, ctx: FormatContext):
-        # TODO put the right language here
         lang = [c for c in node.attributes["classes"] if c != "code"]
         yield ".. code::" + (" " + lang[0] if lang else "")
         yield ""
@@ -374,9 +369,8 @@ def main(args):
     parser.add_argument("files", nargs="*")
     args = parser.parse_args(args)
 
-    roles.register_local_role("class", XRefRole())
-    roles.register_local_role("download", XRefRole())
-    roles.register_local_role("ref", XRefRole())
+    for role in ["class", "download", "ref"]:
+        roles.register_local_role(role, XRefRole())
 
     parser = docutils.parsers.rst.Parser()
 
