@@ -123,7 +123,7 @@ WIDTH = 72
 
 
 class FormatContext(
-    namedtuple("FormatContextBase", ["section_depth", "width", "bullet"])
+    namedtuple("FormatContextBase", ["section_depth", "width", "bullet", "colwidths"])
 ):
     def indent(self, n):
         return self._replace(width=self.width - n)
@@ -131,8 +131,14 @@ class FormatContext(
     def in_section(self):
         return self._replace(section_depth=self.section_depth + 1)
 
+    def with_width(self, w):
+        return self._replace(width=w)
+
     def with_bullet(self, bullet):
         return self._replace(bullet=bullet)
+
+    def with_colwidths(self, c):
+        return self._replace(colwidths=c)
 
 
 def wrap_text(width, text):
@@ -277,7 +283,56 @@ class Formatters:
         yield from chain_intersperse("", fmt_children(node, ctx.in_section()))
 
     @staticmethod
-    def document(node, ctx):
+    def document(node, ctx: FormatContext):
+        yield from chain_intersperse("", fmt_children(node, ctx))
+
+    # Tables.
+    @staticmethod
+    def row(node, ctx: FormatContext):
+        # sep = "|" + "|".join(" " * w for w in ctx.colwidths) + "|"
+        # yield sep
+
+        all_lines = [
+            chain_intersperse("", fmt_children(entry, ctx.with_width(w - 2)))
+            for entry, w in zip(node.children, ctx.colwidths)
+        ]
+        for line_group in itertools.zip_longest(*all_lines):
+            yield "|" + "|".join(
+                " " + (line or "").ljust(w - 2) + " "
+                for line, w in zip(line_group, ctx.colwidths)
+            ) + "|"
+
+    @staticmethod
+    def tbody(node, ctx: FormatContext):
+        sep = "+" + "+".join("-" * w for w in ctx.colwidths) + "+"
+        yield from chain_intersperse(sep, fmt_children(node, ctx))
+
+    thead = tbody
+
+    @staticmethod
+    def tgroup(node, ctx: FormatContext):
+        ctx = ctx.with_colwidths(
+            [
+                c.attributes["colwidth"]
+                for c in node.children
+                if isinstance(c, docutils.nodes.colspec)
+            ]
+        )
+        sep = "+" + "+".join("-" * w for w in ctx.colwidths) + "+"
+
+        yield sep
+        for c in node.children:
+            if isinstance(c, docutils.nodes.colspec):
+                continue
+            if isinstance(c, docutils.nodes.thead):
+                yield from fmt(c, ctx)
+                yield "+" + "+".join("=" * w for w in ctx.colwidths) + "+"
+            if isinstance(c, docutils.nodes.tbody):
+                yield from fmt(c, ctx)
+                yield sep
+
+    @staticmethod
+    def table(node, ctx: FormatContext):
         yield from chain_intersperse("", fmt_children(node, ctx))
 
     # Misc.
@@ -287,16 +342,9 @@ class Formatters:
 
     @staticmethod
     def reference(node, ctx: FormatContext):
-        if "refuri" in node.attributes:
-            title = node.children[0].astext()
-            uri = node.attributes["refuri"]
-            yield f"`{title} <{uri}>`_"
-            return
-        title, target = (c.astext() for c in node.children)
-        if title == target:
-            yield f":ref:`{target}`"
-        else:
-            yield f":ref:`{title} <{target}>`"
+        title = node.children[0].astext()
+        uri = node.attributes["refuri"]
+        yield f"`{title} <{uri}>`_"
 
     @staticmethod
     def xref(node, ctx: FormatContext):
@@ -330,6 +378,10 @@ class Formatters:
         yield ""
         text = "\n".join(chain(fmt_children(node, ctx)))
         yield from with_spaces(3, text.split("\n"))
+
+    @staticmethod
+    def image(node, ctx: FormatContext):
+        yield f".. image:: {node.attributes['uri']}"
 
     @staticmethod
     def literal_block(node, ctx: FormatContext):
@@ -393,7 +445,7 @@ def main(args):
 
         cm = open(fn, "w") if args.in_place else nullcontext(sys.stdout)
         with cm as f:
-            print("\n".join(fmt(doc, FormatContext(0, WIDTH, None))), file=f)
+            print("\n".join(fmt(doc, FormatContext(0, WIDTH, None, None))), file=f)
 
 
 if __name__ == "__main__":
