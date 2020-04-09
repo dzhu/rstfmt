@@ -9,6 +9,7 @@ from collections import namedtuple
 
 import docutils
 import docutils.parsers.rst
+import docutils.parsers.rst.directives.parts
 from docutils.parsers.rst import directives, roles
 
 import sphinx.directives
@@ -79,6 +80,11 @@ try:
 
 
 except ImportError:
+    pass
+
+
+@register_directive("contents")
+class contents_directive(generic_directive, directives.parts.Contents):
     pass
 
 
@@ -251,6 +257,10 @@ class Formatters:
     def literal(node, ctx: FormatContext):
         yield "``" + "".join(chain(fmt_children(node, ctx))) + "``"
 
+    @staticmethod
+    def title_reference(node, ctx: FormatContext):
+        yield "`" + "".join(chain(fmt_children(node, ctx))) + "`"
+
     # Lists.
     @staticmethod
     def bullet_list(node, ctx: FormatContext):
@@ -409,15 +419,25 @@ class Formatters:
     def note(node, ctx: FormatContext):
         yield ".. note::"
         yield ""
-        text = "\n".join(chain(fmt_children(node, ctx)))
-        yield from with_spaces(3, text.split("\n"))
+        yield from with_spaces(
+            3, chain_intersperse("", fmt_children(node, ctx.indent(3)))
+        )
 
     @staticmethod
     def warning(node, ctx: FormatContext):
         yield ".. warning::"
         yield ""
-        text = "\n".join(chain(fmt_children(node, ctx)))
-        yield from with_spaces(3, text.split("\n"))
+        yield from with_spaces(
+            3, chain_intersperse("", fmt_children(node, ctx.indent(3)))
+        )
+
+    @staticmethod
+    def hint(node, ctx: FormatContext):
+        yield ".. hint::"
+        yield ""
+        yield from with_spaces(
+            3, chain_intersperse("", fmt_children(node, ctx.indent(3)))
+        )
 
     @staticmethod
     def image(node, ctx: FormatContext):
