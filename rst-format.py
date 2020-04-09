@@ -119,45 +119,7 @@ section_chars = '=-~^"'
 WIDTH = 72
 
 
-# Helper classes and functions.
-
-
-class FormatContext(
-    namedtuple("FormatContextBase", ["section_depth", "width", "bullet", "colwidths"])
-):
-    def indent(self, n):
-        return self._replace(width=self.width - n)
-
-    def in_section(self):
-        return self._replace(section_depth=self.section_depth + 1)
-
-    def with_width(self, w):
-        return self._replace(width=w)
-
-    def with_bullet(self, bullet):
-        return self._replace(bullet=bullet)
-
-    def with_colwidths(self, c):
-        return self._replace(colwidths=c)
-
-
-def wrap_text(width, text):
-    buf = []
-    n = 0
-    for w in text.split():
-        n2 = n + bool(buf) + len(w)
-        if n2 > width:
-            yield " ".join(buf)
-            buf = []
-            n2 = len(w)
-        buf.append(w)
-        n = n2
-    if buf:
-        yield " ".join(buf)
-
-
-def fmt_children(node, ctx):
-    return (fmt(c, ctx) for c in node.children)
+# Iterator stuff.
 
 
 def intersperse(val, it):
@@ -185,16 +147,69 @@ def chain_intersperse(val, it):
         yield from x
 
 
-def with_spaces(n, lines):
-    s = " " * n
-    for l in lines:
-        yield s + l if l else l
-
-
 def pairwise(iterable):
     a, b = itertools.tee(iterable)
     next(b, None)
     return zip(a, b)
+
+
+# Helper classes and functions.
+
+
+class FormatContext(
+    namedtuple("FormatContextBase", ["section_depth", "width", "bullet", "colwidths"])
+):
+    def indent(self, n):
+        return self._replace(width=self.width - n)
+
+    def in_section(self):
+        return self._replace(section_depth=self.section_depth + 1)
+
+    def with_width(self, w):
+        return self._replace(width=w)
+
+    def with_bullet(self, bullet):
+        return self._replace(bullet=bullet)
+
+    def with_colwidths(self, c):
+        return self._replace(colwidths=c)
+
+
+# Define this here to support Python <3.7.
+class nullcontext(contextlib.AbstractContextManager):
+    def __init__(self, enter_result=None):
+        self.enter_result = enter_result
+
+    def __enter__(self):
+        return self.enter_result
+
+    def __exit__(self, *excinfo):
+        pass
+
+
+def wrap_text(width, text):
+    buf = []
+    n = 0
+    for w in text.split():
+        n2 = n + bool(buf) + len(w)
+        if n2 > width:
+            yield " ".join(buf)
+            buf = []
+            n2 = len(w)
+        buf.append(w)
+        n = n2
+    if buf:
+        yield " ".join(buf)
+
+
+def fmt_children(node, ctx):
+    return (fmt(c, ctx) for c in node.children)
+
+
+def with_spaces(n, lines):
+    s = " " * n
+    for l in lines:
+        yield s + l if l else l
 
 
 def preproc(node):
@@ -425,18 +440,6 @@ def fmt(node, ctx: FormatContext):
     )
     # print(type(node).__name__, list(func(node, ctx)))
     return func(node, ctx)
-
-
-# Define this here to support Python <3.7.
-class nullcontext(contextlib.AbstractContextManager):
-    def __init__(self, enter_result=None):
-        self.enter_result = enter_result
-
-    def __enter__(self):
-        return self.enter_result
-
-    def __exit__(self, *excinfo):
-        pass
 
 
 def main(args):
