@@ -15,14 +15,34 @@ class RefNode(docutils.nodes.Element):
     pass
 
 
-class toctree(docutils.nodes.Element):
-    def __init__(self, directive):
-        super().__init__("", directive=directive)
+class directive(docutils.nodes.Element):
+    def __init__(self, d):
+        super().__init__("", directive=d)
 
 
-class toctree_dir(sphinx.directives.TocTree):
+class generic_directive(docutils.parsers.rst.Directive):
+    has_content = True
+
     def run(self):
-        return [toctree(self)]
+        return [directive(self)]
+
+
+class toctree_directive(generic_directive):
+    option_spec = sphinx.directives.other.TocTree.option_spec
+
+
+directives.register_directive("toctree", toctree_directive)
+
+
+try:
+    import sphinxarg.ext
+
+    class argparse_directive(generic_directive):
+        option_spec = sphinxarg.ext.ArgParseDirective.option_spec
+
+    directives.register_directive("argparse", argparse_directive)
+except ImportError:
+    pass
 
 
 class XRefRole(sphinx.roles.XRefRole):
@@ -41,7 +61,7 @@ class XRefRole(sphinx.roles.XRefRole):
         )
 
 
-docutils.nodes._add_node_class_names(["toctree"])
+docutils.nodes._add_node_class_names(["directive"])
 
 
 class DumpVisitor(docutils.nodes.GenericNodeVisitor):
@@ -188,7 +208,16 @@ class Formatters:
         yield section_chars[ctx.section_depth - 1] * len(text)
 
     @staticmethod
-    def toctree(node, ctx: FormatContext):
+    def block_quote(node, ctx: FormatContext):
+        yield from with_spaces(
+            3,
+            chain_intersperse(
+                "", fmt_children(node, ctx._replace(width=ctx.width - 2))
+            ),
+        )
+
+    @staticmethod
+    def directive(node, ctx: FormatContext):
         d = node.attributes["directive"]
         # TODO: args?
         yield f".. {d.name}::"
@@ -252,7 +281,7 @@ class Formatters:
 
     @staticmethod
     def literal_block(node, ctx: FormatContext):
-        # TODO put the right thing here
+        # TODO put the right language here
         yield ".. code::"
         yield ""
         text = "\n".join(chain(fmt_children(node, ctx)))
@@ -270,8 +299,6 @@ def fmt(node, ctx: FormatContext):
 
 
 def main(args):
-    directives.register_directive("toctree", toctree_dir)
-
     roles.register_local_role("class", XRefRole())
     roles.register_local_role("download", XRefRole())
     roles.register_local_role("ref", XRefRole())
