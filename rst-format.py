@@ -84,7 +84,19 @@ class DumpVisitor(docutils.nodes.GenericNodeVisitor):
         self.depth -= 1
 
 
-FormatContext = namedtuple("FormatContext", ["section_depth", "width"])
+class FormatContext(
+    namedtuple("FormatContextBase", ["section_depth", "width", "bullet"])
+):
+    def indent(self, n):
+        return self._replace(width=self.width - n)
+
+    def in_section(self):
+        return self._replace(section_depth=self.section_depth + 1)
+
+    def with_bullet(self, bullet):
+        return self._replace(bullet=bullet)
+
+
 section_chars = '=-~^"'
 
 
@@ -120,6 +132,10 @@ def intersperse(val, it):
 
 
 chain = itertools.chain.from_iterable
+
+
+def enum_first(it):
+    return zip(itertools.chain([True], itertools.repeat(False)), it)
 
 
 def chain_intersperse(val, it):
@@ -158,23 +174,20 @@ class Formatters:
     # Lists.
     @staticmethod
     def bullet_list(node, ctx: FormatContext):
-        for c in node.children:
-            assert isinstance(c, docutils.nodes.list_item)
-            f = fmt(c, ctx._replace(width=ctx.width - 2))
-            yield "- " + next(f)
-            yield from with_spaces(2, f)
+        yield from chain_intersperse("", fmt_children(node, ctx.with_bullet("- ")))
 
     @staticmethod
     def enumerated_list(node, ctx: FormatContext):
-        for c in node.children:
-            assert isinstance(c, docutils.nodes.list_item)
-            f = fmt(c, ctx._replace(width=ctx.width - 2))
-            yield "#. " + next(f)
-            yield from with_spaces(3, f)
+        yield from chain_intersperse("", fmt_children(node, ctx.with_bullet("#.")))
 
     @staticmethod
     def list_item(node, ctx: FormatContext):
-        yield from chain_intersperse("", fmt_children(node, ctx))
+        w = len(ctx.bullet) + 1
+        b = ctx.bullet + " "
+        s = " " * w
+        ctx = ctx.indent(w)
+        for first, c in enum_first(chain_intersperse("", fmt_children(node, ctx))):
+            yield ((b if first else s) if c else "") + c
 
     @staticmethod
     def term(node, ctx: FormatContext):
@@ -210,15 +223,13 @@ class Formatters:
     @staticmethod
     def block_quote(node, ctx: FormatContext):
         yield from with_spaces(
-            3,
-            chain_intersperse(
-                "", fmt_children(node, ctx._replace(width=ctx.width - 2))
-            ),
+            3, chain_intersperse("", fmt_children(node, ctx.indent(3))),
         )
 
     @staticmethod
     def directive(node, ctx: FormatContext):
         d = node.attributes["directive"]
+
         # TODO: args?
         yield f".. {d.name}::"
         # Just rely on the order being stable, hopefully.
@@ -229,9 +240,7 @@ class Formatters:
 
     @staticmethod
     def section(node, ctx: FormatContext):
-        yield from chain_intersperse(
-            "", fmt_children(node, ctx._replace(section_depth=ctx.section_depth + 1))
-        )
+        yield from chain_intersperse("", fmt_children(node, ctx.in_section()))
 
     @staticmethod
     def document(node, ctx):
@@ -256,8 +265,13 @@ class Formatters:
             yield f":ref:`{title} <{target}>`"
 
     @staticmethod
+    def inline(node, ctx: FormatContext):
+        yield from chain(fmt_children(node, ctx))
+
+    @staticmethod
     def target(node, ctx: FormatContext):
-        yield from []
+        if isinstance(node.parent, (docutils.nodes.document, docutils.nodes.section)):
+            yield f".. _{node.attributes['ids'][0]}:"
 
     @staticmethod
     def comment(node, ctx: FormatContext):
@@ -282,9 +296,10 @@ class Formatters:
     @staticmethod
     def literal_block(node, ctx: FormatContext):
         # TODO put the right language here
-        yield ".. code::"
+        lang = [c for c in node.attributes["classes"] if c != "code"]
+        yield ".. code::" + (" " + lang[0] if lang else "")
         yield ""
-        text = "\n".join(chain(fmt_children(node, ctx)))
+        text = "".join(chain(fmt_children(node, ctx)))
         yield from with_spaces(3, text.split("\n"))
 
 
@@ -323,7 +338,7 @@ def main(args):
             doc.walkabout(DumpVisitor(doc))
             # doc.walkabout(FormatVisitor(doc))
 
-        print("\n".join(fmt(doc, FormatContext(0, WIDTH))))
+        print("\n".join(fmt(doc, FormatContext(0, WIDTH, None))))
 
 
 if __name__ == "__main__":
