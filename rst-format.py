@@ -191,6 +191,30 @@ def with_spaces(n, lines):
         yield s + l if l else l
 
 
+def pairwise(iterable):
+    a, b = itertools.tee(iterable)
+    next(b, None)
+    return zip(a, b)
+
+
+def preproc(node):
+    """
+    Do some node preprocessing that is generic across node types and is therefore most convenient to
+    do as a simple recursive function rather than as part of the big dispatcher class.
+    """
+    node.children = [
+        c for c in node.children if not isinstance(c, docutils.nodes.system_message)
+    ]
+    for c in node.children:
+        preproc(c)
+
+    for a, b in pairwise(node.children):
+        if isinstance(a, docutils.nodes.reference) and isinstance(
+            b, docutils.nodes.target
+        ):
+            a.attributes["target"] = b
+
+
 # Main stuff.
 
 
@@ -344,7 +368,8 @@ class Formatters:
     def reference(node, ctx: FormatContext):
         title = node.children[0].astext()
         uri = node.attributes["refuri"]
-        yield f"`{title} <{uri}>`_"
+        suffix = "_" if "target" in node.attributes else "__"
+        yield f"`{title} <{uri}>`{suffix}"
 
     @staticmethod
     def xref(node, ctx: FormatContext):
@@ -437,6 +462,7 @@ def main(args):
             ).get_default_values(),
         )
         parser.parse(open(fn).read(), doc)
+        preproc(doc)
 
         if not args.quiet:
             print("=" * 60, fn)
