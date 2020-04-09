@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+import argparse
+import contextlib
+import functools
 import itertools
 import sys
 from collections import namedtuple
@@ -9,38 +12,74 @@ import docutils.parsers.rst
 from docutils.parsers.rst import directives, roles
 
 import sphinx.directives
+import sphinx.ext.autodoc.directive
 
 
-class RefNode(docutils.nodes.Element):
-    pass
+# Handle directives by inserting them into the tree unparsed.
 
 
 class directive(docutils.nodes.Element):
     def __init__(self, d):
         super().__init__("", directive=d)
+        print(d.name)
+        print(d.arguments)
+        print(d.options)
+        print(d.content)
+
+
+docutils.nodes._add_node_class_names(["directive"])
 
 
 class generic_directive(docutils.parsers.rst.Directive):
-    has_content = True
-
     def run(self):
         return [directive(self)]
 
 
-class toctree_directive(generic_directive):
-    option_spec = sphinx.directives.other.TocTree.option_spec
+# Add support for common directives.
 
 
-directives.register_directive("toctree", toctree_directive)
+def identity(x):
+    return x
+
+
+def register_directive(name):
+    def proc(cls):
+        print(cls.option_spec)
+        cls.option_spec = {k: identity for k in cls.option_spec}
+        directives.register_directive(name, cls)
+
+    return proc
+
+
+@register_directive("toctree")
+class toctree_directive(generic_directive, sphinx.directives.other.TocTree):
+    pass
+
+
+for d in [
+    sphinx.ext.autodoc.ClassDocumenter,
+    sphinx.ext.autodoc.ModuleDocumenter,
+    sphinx.ext.autodoc.FunctionDocumenter,
+    sphinx.ext.autodoc.MethodDocumenter,
+]:
+
+    register_directive("auto" + d.objtype)(
+        type(
+            f"autodoc_{d.objtype}_directive",
+            (generic_directive, sphinx.ext.autodoc.directive.AutodocDirective),
+            {"option_spec": d.option_spec},
+        )
+    )
 
 
 try:
     import sphinxarg.ext
 
-    class argparse_directive(generic_directive):
-        option_spec = sphinxarg.ext.ArgParseDirective.option_spec
+    @register_directive("argparse")
+    class argparse_directive(generic_directive, sphinxarg.ext.ArgParseDirective):
+        pass
 
-    directives.register_directive("argparse", argparse_directive)
+
 except ImportError:
     pass
 
@@ -59,9 +98,6 @@ class XRefRole(sphinx.roles.XRefRole):
             ],
             [],
         )
-
-
-docutils.nodes._add_node_class_names(["directive"])
 
 
 class DumpVisitor(docutils.nodes.GenericNodeVisitor):
@@ -84,6 +120,16 @@ class DumpVisitor(docutils.nodes.GenericNodeVisitor):
         self.depth -= 1
 
 
+# Constants.
+
+
+section_chars = '=-~^"'
+WIDTH = 72
+
+
+# Helper classes and functions.
+
+
 class FormatContext(
     namedtuple("FormatContextBase", ["section_depth", "width", "bullet"])
 ):
@@ -95,9 +141,6 @@ class FormatContext(
 
     def with_bullet(self, bullet):
         return self._replace(bullet=bullet)
-
-
-section_chars = '=-~^"'
 
 
 def wrap_text(width, text):
@@ -117,9 +160,6 @@ def wrap_text(width, text):
 
 def fmt_children(node, ctx):
     return (fmt(c, ctx) for c in node.children)
-
-
-WIDTH = 72
 
 
 def intersperse(val, it):
@@ -151,6 +191,9 @@ def with_spaces(n, lines):
     s = " " * n
     for l in lines:
         yield s + l if l else l
+
+
+# Main stuff.
 
 
 class Formatters:
@@ -230,8 +273,7 @@ class Formatters:
     def directive(node, ctx: FormatContext):
         d = node.attributes["directive"]
 
-        # TODO: args?
-        yield f".. {d.name}::"
+        yield " ".join([f".. {d.name}::", *d.arguments])
         # Just rely on the order being stable, hopefully.
         for k, v in d.options.items():
             yield f"   :{k}:" if v is None else f"   :{k}: {v}"
@@ -271,7 +313,7 @@ class Formatters:
     @staticmethod
     def target(node, ctx: FormatContext):
         if isinstance(node.parent, (docutils.nodes.document, docutils.nodes.section)):
-            yield f".. _{node.attributes['ids'][0]}:"
+            yield f".. _{node.attributes['names'][0]}:"
 
     @staticmethod
     def comment(node, ctx: FormatContext):
@@ -313,15 +355,32 @@ def fmt(node, ctx: FormatContext):
     return func(node, ctx)
 
 
+# Define this here to support Python <3.7.
+class nullcontext(contextlib.AbstractContextManager):
+    def __init__(self, enter_result=None):
+        self.enter_result = enter_result
+
+    def __enter__(self):
+        return self.enter_result
+
+    def __exit__(self, *excinfo):
+        pass
+
+
 def main(args):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--in-place", action="store_true")
+    parser.add_argument("-q", "--quiet", action="store_true")
+    parser.add_argument("files", nargs="*")
+    args = parser.parse_args(args)
+
     roles.register_local_role("class", XRefRole())
     roles.register_local_role("download", XRefRole())
     roles.register_local_role("ref", XRefRole())
 
     parser = docutils.parsers.rst.Parser()
 
-    quiet = False
-    for fn in args:
+    for fn in args.files:
         if fn == "-q":
             quiet = True
             continue
@@ -333,12 +392,14 @@ def main(args):
         )
         parser.parse(open(fn).read(), doc)
 
-        if not quiet:
+        if not args.quiet:
             print("=" * 60, fn)
             doc.walkabout(DumpVisitor(doc))
             # doc.walkabout(FormatVisitor(doc))
 
-        print("\n".join(fmt(doc, FormatContext(0, WIDTH, None))))
+        cm = open(fn, "w") if args.in_place else nullcontext(sys.stdout)
+        with cm as f:
+            print("\n".join(fmt(doc, FormatContext(0, WIDTH, None))), file=f)
 
 
 if __name__ == "__main__":
