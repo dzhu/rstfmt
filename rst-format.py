@@ -10,11 +10,9 @@ from collections import namedtuple
 import docutils
 import docutils.parsers.rst
 import docutils.parsers.rst.directives.parts
-from docutils.parsers.rst import directives, roles
-
 import sphinx.directives
 import sphinx.ext.autodoc.directive
-
+from docutils.parsers.rst import directives, roles
 
 # Handle directives by inserting them into the tree unparsed.
 
@@ -118,7 +116,6 @@ class DumpVisitor(docutils.nodes.GenericNodeVisitor):
 
 
 section_chars = '=-~^"'
-WIDTH = 72
 
 
 # Iterator stuff.
@@ -461,6 +458,7 @@ def fmt(node, ctx: FormatContext):
 def main(args):
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--in-place", action="store_true")
+    parser.add_argument("-w", "--width", type=int, default=72)
     parser.add_argument("-q", "--quiet", action="store_true")
     parser.add_argument("files", nargs="*")
     args = parser.parse_args(args)
@@ -490,7 +488,7 @@ def main(args):
 
         cm = open(fn, "w") if args.in_place else nullcontext(sys.stdout)
         with cm as f:
-            print("\n".join(fmt(doc, FormatContext(0, WIDTH, None, None))), file=f)
+            print("\n".join(fmt(doc, FormatContext(0, args.width, None, None))), file=f)
 
 
 if __name__ == "__main__":
