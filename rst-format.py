@@ -472,22 +472,26 @@ def main(args):
     parser.add_argument("files", nargs="*")
     args = parser.parse_args(args)
 
+    if not args.files:
+        args.files = ["-"]
+
     for r in ["class", "download", "func", "ref", "superscript"]:
         roles.register_canonical_role(r, roles.GenericRole(r, role))
 
     parser = docutils.parsers.rst.Parser()
 
     for fn in args.files:
-        if fn == "-q":
-            quiet = True
-            continue
         doc = docutils.utils.new_document(
             "",
             settings=docutils.frontend.OptionParser(
                 components=(docutils.parsers.rst.Parser,)
             ).get_default_values(),
         )
-        parser.parse(open(fn).read(), doc)
+
+        cm = nullcontext(sys.stdin) if fn == "-" else open(fn)
+        with cm as f:
+            parser.parse(f.read(), doc)
+
         preproc(doc)
 
         if not args.quiet:
