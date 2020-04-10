@@ -137,6 +137,16 @@ def enum_first(it):
     return zip(itertools.chain([True], itertools.repeat(False)), it)
 
 
+def prepend_if_any(f, it):
+    try:
+        x = next(it)
+    except StopIteration:
+        return
+    yield f
+    yield x
+    yield from it
+
+
 def chain_intersperse(val, it):
     first = True
     for x in it:
@@ -317,8 +327,7 @@ class Formatters:
         # Just rely on the order being stable, hopefully.
         for k, v in d.options.items():
             yield f"   :{k}:" if v is None else f"   :{k}: {v}"
-        yield ""
-        yield from with_spaces(3, d.content)
+        yield from prepend_if_any("", with_spaces(3, d.content))
 
     @staticmethod
     def section(node, ctx: FormatContext):
