@@ -296,7 +296,7 @@ class Formatters:
             if isinstance(c, docutils.nodes.term):
                 yield from fmt(c, ctx)
             elif isinstance(c, docutils.nodes.definition):
-                yield from with_spaces(3, fmt(c, ctx))
+                yield from with_spaces(3, fmt(c, ctx.indent(3)))
 
     @staticmethod
     def definition_list(node, ctx: FormatContext):
