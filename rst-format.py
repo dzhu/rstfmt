@@ -89,13 +89,9 @@ class contents_directive(generic_directive, directives.parts.Contents):
 
 
 @register_node
-class xref(docutils.nodes.Element):
-    pass
-
-
-class XRefRole(sphinx.roles.XRefRole):
-    def run(self):
-        return [xref(text=self.rawtext)], []
+class role(docutils.nodes.Element):
+    def __init__(self, rawtext, escaped_text, **options):
+        super().__init__(rawtext, escaped_text=escaped_text, options=options)
 
 
 class DumpVisitor(docutils.nodes.GenericNodeVisitor):
@@ -397,8 +393,8 @@ class Formatters:
         yield f"`{title} <{uri}>`{suffix}"
 
     @staticmethod
-    def xref(node, ctx: FormatContext):
-        yield node.attributes["text"]
+    def role(node, ctx: FormatContext):
+        yield node.rawsource
 
     @staticmethod
     def inline(node, ctx: FormatContext):
@@ -469,8 +465,8 @@ def main(args):
     parser.add_argument("files", nargs="*")
     args = parser.parse_args(args)
 
-    for role in ["class", "download", "ref"]:
-        roles.register_local_role(role, XRefRole())
+    for r in ["class", "download", "func", "ref", "superscript"]:
+        roles.register_canonical_role(r, roles.GenericRole(r, role))
 
     parser = docutils.parsers.rst.Parser()
 
