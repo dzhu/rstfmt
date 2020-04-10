@@ -4,6 +4,7 @@ import argparse
 import contextlib
 import functools
 import itertools
+import string
 import sys
 from collections import namedtuple
 
@@ -117,6 +118,11 @@ class DumpVisitor(docutils.nodes.GenericNodeVisitor):
 
 section_chars = '=-~^"'
 
+# https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#inline-markup-recognition-rules
+space_chars = set(string.whitespace)
+pre_markup_break_chars = space_chars | set("-:/'\"<([{")
+post_markup_break_chars = space_chars | set("-.,:;!?\\/'\")]}>")
+
 
 # Iterator stuff.
 
@@ -196,10 +202,85 @@ class nullcontext(contextlib.AbstractContextManager):
         pass
 
 
-def wrap_text(width, text):
+class inline_markup:
+    def __init__(self, text):
+        self.text = text
+
+    def __repr__(self):
+        return "inline_markup({})".format(repr(self.text))
+
+
+word_info = namedtuple(
+    "word_info",
+    ["text", "in_markup", "start_space", "end_space", "start_punct", "end_punct"],
+)
+
+
+def split_words(item):
+    if isinstance(item, str):
+        if not item:
+            # An empty string is treated as having trailing punctuation: it only
+            # shows up when two inline markup blocks are separated by
+            # backslash-space, and this means that after it is merged with its
+            # predecessor the resulting word will not cause a second escape to
+            # be introduced when merging with the successor.
+            new_words = [word_info(item, False, False, False, False, True)]
+        else:
+            new_words = [
+                word_info(s, False, False, False, False, False) for s in item.split()
+            ]
+            if item:
+                if not new_words:
+                    new_words = [word_info("", False, True, True, True, True)]
+                if item[0] in space_chars:
+                    new_words[0] = new_words[0]._replace(start_space=True)
+                if item[-1] in space_chars:
+                    new_words[-1] = new_words[-1]._replace(end_space=True)
+                if item[0] in post_markup_break_chars:
+                    new_words[0] = new_words[0]._replace(start_punct=True)
+                if item[-1] in pre_markup_break_chars:
+                    new_words[-1] = new_words[-1]._replace(end_punct=True)
+    elif isinstance(item, inline_markup):
+        new_words = [
+            word_info(s, True, False, False, False, False) for s in item.text.split()
+        ]
+    return new_words
+
+
+def wrap_text(width, items):
+    items = list(items)
+    raw_words = list(chain(map(split_words, items)))
+
+    words = [word_info("", False, True, True, True, True)]
+    for word in raw_words:
+        last = words[-1]
+        if not last.in_markup and word.in_markup and not last.end_space:
+            join = "" if last.end_punct else r"\ "
+            words[-1] = word_info(
+                last.text + join + word.text, True, False, False, False, False
+            )
+        elif last.in_markup and not word.in_markup and not word.start_space:
+            join = "" if word.start_punct else r"\ "
+            words[-1] = word_info(
+                last.text + join + word.text,
+                False,
+                False,
+                word.end_space,
+                word.start_punct,
+                word.end_punct,
+            )
+        else:
+            words.append(word)
+
+    words = (word.text for word in words if word.text)
+
+    if width <= 0:
+        yield " ".join(words)
+        return
+
     buf = []
     n = 0
-    for w in text.split():
+    for w in words:
         n2 = n + bool(buf) + len(w)
         if n2 > width:
             yield " ".join(buf)
@@ -246,23 +327,23 @@ class Formatters:
     # Basic formatting.
     @staticmethod
     def substitution_reference(node, ctx: FormatContext):
-        yield "\\ |" + "".join(chain(fmt_children(node, ctx))) + "|\\ "
+        yield inline_markup("|" + "".join(chain(fmt_children(node, ctx))) + "|")
 
     @staticmethod
     def emphasis(node, ctx: FormatContext):
-        yield "*" + "".join(chain(fmt_children(node, ctx))) + "*"
+        yield inline_markup("*" + "".join(chain(fmt_children(node, ctx))) + "*")
 
     @staticmethod
     def strong(node, ctx: FormatContext):
-        yield "**" + "".join(chain(fmt_children(node, ctx))) + "**"
+        yield inline_markup("**" + "".join(chain(fmt_children(node, ctx))) + "**")
 
     @staticmethod
     def literal(node, ctx: FormatContext):
-        yield "``" + "".join(chain(fmt_children(node, ctx))) + "``"
+        yield inline_markup("``" + "".join(chain(fmt_children(node, ctx))) + "``")
 
     @staticmethod
     def title_reference(node, ctx: FormatContext):
-        yield "`" + "".join(chain(fmt_children(node, ctx))) + "`"
+        yield inline_markup("`" + "".join(chain(fmt_children(node, ctx))) + "`")
 
     # Lists.
     @staticmethod
@@ -284,7 +365,7 @@ class Formatters:
 
     @staticmethod
     def term(node, ctx: FormatContext):
-        yield "".join(chain(fmt_children(node, ctx)))
+        yield " ".join(wrap_text(0, chain(fmt_children(node, ctx))))
 
     @staticmethod
     def definition(node, ctx: FormatContext):
@@ -305,11 +386,11 @@ class Formatters:
     # Structure.
     @staticmethod
     def paragraph(node, ctx: FormatContext):
-        yield from wrap_text(ctx.width, "".join(chain(fmt_children(node, ctx))))
+        yield from wrap_text(ctx.width, chain(fmt_children(node, ctx)))
 
     @staticmethod
     def title(node, ctx: FormatContext):
-        text = "".join(chain(fmt(c, ctx) for c in node.children))
+        text = " ".join(wrap_text(0, chain(fmt_children(node, ctx))))
         yield text
         yield section_chars[ctx.section_depth - 1] * len(text)
 
@@ -395,12 +476,16 @@ class Formatters:
     def reference(node, ctx: FormatContext):
         title = node.children[0].astext()
         uri = node.attributes["refuri"]
-        suffix = "_" if "target" in node.attributes else "__"
-        yield f"`{title} <{uri}>`{suffix}"
+        # Do a basic check for standalone hyperlinks.
+        if uri == title or uri == "mailto:" + title:
+            yield inline_markup(title)
+        else:
+            suffix = "_" if "target" in node.attributes else "__"
+            yield inline_markup(f"`{title} <{uri}>`{suffix}")
 
     @staticmethod
     def role(node, ctx: FormatContext):
-        yield node.rawsource
+        yield inline_markup(node.rawsource)
 
     @staticmethod
     def inline(node, ctx: FormatContext):
