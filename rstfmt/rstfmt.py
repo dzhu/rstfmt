@@ -601,7 +601,6 @@ def dump_node(node, file):
 
 
 def node_eq(d1, d2):
-    print("check \x1b[34m{}\x1b[m \x1b[32m{}\x1b[m".format(d1, d2))
     if type(d1) is not type(d2):
         print("different type")
         return False
@@ -626,18 +625,21 @@ def run_test(doc):
         doc2 = parse_string(output)
         output2 = format_node(width, doc2)
 
-        with open("/tmp/dump1.txt", "w") as f:
-            dump_node(doc, f)
-        with open("/tmp/dump2.txt", "w") as f:
-            dump_node(doc2, f)
+        try:
+            assert node_eq(doc, doc2)
+            assert output == output2
+        except AssertionError:
+            with open("/tmp/dump1.txt", "w") as f:
+                dump_node(doc, f)
+            with open("/tmp/dump2.txt", "w") as f:
+                dump_node(doc2, f)
 
-        with open("/tmp/out1.txt", "w") as f:
-            print(output, file=f)
-        with open("/tmp/out2.txt", "w") as f:
-            print(output2, file=f)
+            with open("/tmp/out1.txt", "w") as f:
+                print(output, file=f)
+            with open("/tmp/out2.txt", "w") as f:
+                print(output2, file=f)
 
-        assert node_eq(doc, doc2)
-        assert output == output2
+            raise
 
 
 def main():
@@ -667,7 +669,10 @@ def main():
             dump_node(doc, sys.stderr)
 
         if args.test:
-            run_test(doc)
+            try:
+                run_test(doc)
+            except AssertionError as e:
+                raise AssertionError(f"Failed consistency test on {fn}!") from e
 
         output = format_node(args.width, doc)
 
