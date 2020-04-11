@@ -545,13 +545,13 @@ def fmt(node, ctx: FormatContext):
     return func(node, ctx)
 
 
-def main(args):
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--in-place", action="store_true")
     parser.add_argument("-w", "--width", type=int, default=72)
     parser.add_argument("-q", "--quiet", action="store_true")
     parser.add_argument("files", nargs="*")
-    args = parser.parse_args(args)
+    args = parser.parse_args()
 
     for r in ["class", "download", "func", "ref", "superscript"]:
         roles.register_canonical_role(r, roles.GenericRole(r, role))
@@ -579,7 +579,3 @@ def main(args):
         cm = open(fn, "w") if args.in_place else nullcontext(sys.stdout)
         with cm as f:
             print("\n".join(fmt(doc, FormatContext(0, args.width, None, None))), file=f)
-
-
-if __name__ == "__main__":
-    exit(main(sys.argv[1:]))
