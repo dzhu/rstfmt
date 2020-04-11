@@ -54,6 +54,15 @@ class toctree_directive(generic_directive, sphinx.directives.other.TocTree):
     pass
 
 
+# `list-table` directives are parsed as table nodes and could be formatted as such, but that's
+# vulnerable to producing malformed tables when the given column widths are too small. TODO: The
+# contents of some directives, including `list-table`, should be parsed and formatted as normal
+# reST, but we currently dump all directive bodies unchanged.
+@register_directive("list-table")
+class listtable_directive(generic_directive, directives.tables.ListTable):
+    pass
+
+
 for d in [
     sphinx.ext.autodoc.ClassDocumenter,
     sphinx.ext.autodoc.ModuleDocumenter,
