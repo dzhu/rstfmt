@@ -545,6 +545,28 @@ def fmt(node, ctx: FormatContext):
     return func(node, ctx)
 
 
+def format_node(width, node):
+    return "\n".join(fmt(node, FormatContext(0, width, None, None)))
+
+
+def parse_string(s):
+    parser = docutils.parsers.rst.Parser()
+    doc = docutils.utils.new_document(
+        "",
+        settings=docutils.frontend.OptionParser(
+            components=(docutils.parsers.rst.Parser,)
+        ).get_default_values(),
+    )
+    parser.parse(s, doc)
+    preproc(doc)
+
+    return doc
+
+
+def dump_node(node):
+    node.walkabout(DumpVisitor(node))
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--in-place", action="store_true")
@@ -556,26 +578,17 @@ def main():
     for r in ["class", "download", "func", "ref", "superscript"]:
         roles.register_canonical_role(r, roles.GenericRole(r, role))
 
-    parser = docutils.parsers.rst.Parser()
-
     for fn in args.files or ["-"]:
-        doc = docutils.utils.new_document(
-            "",
-            settings=docutils.frontend.OptionParser(
-                components=(docutils.parsers.rst.Parser,)
-            ).get_default_values(),
-        )
-
         cm = nullcontext(sys.stdin) if fn == "-" else open(fn)
         with cm as f:
-            parser.parse(f.read(), doc)
-
-        preproc(doc)
+            doc = parse_string(f.read())
 
         if not args.quiet:
             print("=" * 60, fn)
-            doc.walkabout(DumpVisitor(doc))
+            dump_node(doc)
+
+        output = format_node(args.width, doc)
 
         cm = open(fn, "w") if args.in_place else nullcontext(sys.stdout)
         with cm as f:
-            print("\n".join(fmt(doc, FormatContext(0, args.width, None, None))), file=f)
+            print(output, file=f)
