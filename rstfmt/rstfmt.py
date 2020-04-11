@@ -28,9 +28,7 @@ class DumpVisitor(docutils.nodes.GenericNodeVisitor):
         if isinstance(node, docutils.nodes.Text):
             print(repr(node.astext()[:100]), end="", file=self.file)
         else:
-            print(
-                {k: v for k, v in node.attributes.items() if v}, end="", file=self.file
-            )
+            print({k: v for k, v in node.attributes.items() if v}, end="", file=self.file)
         print(file=self.file)
 
         self.depth += 1
@@ -140,8 +138,7 @@ class inline_markup:
 
 
 word_info = namedtuple(
-    "word_info",
-    ["text", "in_markup", "start_space", "end_space", "start_punct", "end_punct"],
+    "word_info", ["text", "in_markup", "start_space", "end_space", "start_punct", "end_punct"],
 )
 
 
@@ -155,9 +152,7 @@ def split_words(item):
             # be introduced when merging with the successor.
             new_words = [word_info(item, False, False, False, False, True)]
         else:
-            new_words = [
-                word_info(s, False, False, False, False, False) for s in item.split()
-            ]
+            new_words = [word_info(s, False, False, False, False, False) for s in item.split()]
             if item:
                 if not new_words:
                     new_words = [word_info("", False, True, True, True, True)]
@@ -170,9 +165,7 @@ def split_words(item):
                 if item[-1] in pre_markup_break_chars:
                     new_words[-1] = new_words[-1]._replace(end_punct=True)
     elif isinstance(item, inline_markup):
-        new_words = [
-            word_info(s, True, False, False, False, False) for s in item.text.split()
-        ]
+        new_words = [word_info(s, True, False, False, False, False) for s in item.text.split()]
     return new_words
 
 
@@ -185,9 +178,7 @@ def wrap_text(width, items):
         last = words[-1]
         if not last.in_markup and word.in_markup and not last.end_space:
             join = "" if last.end_punct else r"\ "
-            words[-1] = word_info(
-                last.text + join + word.text, True, False, False, False, False
-            )
+            words[-1] = word_info(last.text + join + word.text, True, False, False, False, False)
         elif last.in_markup and not word.in_markup and not word.start_space:
             join = "" if word.start_punct else r"\ "
             words[-1] = word_info(
@@ -236,16 +227,12 @@ def preproc(node):
     Do some node preprocessing that is generic across node types and is therefore most convenient to
     do as a simple recursive function rather than as part of the big dispatcher class.
     """
-    node.children = [
-        c for c in node.children if not isinstance(c, docutils.nodes.system_message)
-    ]
+    node.children = [c for c in node.children if not isinstance(c, docutils.nodes.system_message)]
     for c in node.children:
         preproc(c)
 
     for a, b in pairwise(node.children):
-        if isinstance(a, docutils.nodes.reference) and isinstance(
-            b, docutils.nodes.target
-        ):
+        if isinstance(a, docutils.nodes.reference) and isinstance(b, docutils.nodes.target):
             a.attributes["target"] = b
 
 
@@ -356,8 +343,7 @@ class Formatters:
         ]
         for line_group in itertools.zip_longest(*all_lines):
             yield "|" + "|".join(
-                " " + (line or "").ljust(w - 2) + " "
-                for line, w in zip(line_group, ctx.colwidths)
+                " " + (line or "").ljust(w - 2) + " " for line, w in zip(line_group, ctx.colwidths)
             ) + "|"
 
     @staticmethod
@@ -456,25 +442,19 @@ class Formatters:
     def note(node, ctx: FormatContext):
         yield ".. note::"
         yield ""
-        yield from with_spaces(
-            3, chain_intersperse("", fmt_children(node, ctx.indent(3)))
-        )
+        yield from with_spaces(3, chain_intersperse("", fmt_children(node, ctx.indent(3))))
 
     @staticmethod
     def warning(node, ctx: FormatContext):
         yield ".. warning::"
         yield ""
-        yield from with_spaces(
-            3, chain_intersperse("", fmt_children(node, ctx.indent(3)))
-        )
+        yield from with_spaces(3, chain_intersperse("", fmt_children(node, ctx.indent(3))))
 
     @staticmethod
     def hint(node, ctx: FormatContext):
         yield ".. hint::"
         yield ""
-        yield from with_spaces(
-            3, chain_intersperse("", fmt_children(node, ctx.indent(3)))
-        )
+        yield from with_spaces(3, chain_intersperse("", fmt_children(node, ctx.indent(3))))
 
     @staticmethod
     def image(node, ctx: FormatContext):
