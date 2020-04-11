@@ -12,96 +12,8 @@ from collections import namedtuple
 
 import docutils
 import docutils.parsers.rst
-import docutils.parsers.rst.directives.parts
-import sphinx.directives
-import sphinx.ext.autodoc.directive
-from docutils.parsers.rst import directives, roles
 
-# Handle directives by inserting them into the tree unparsed.
-
-
-def register_node(cls):
-    docutils.nodes._add_node_class_names([cls.__name__])
-    return cls
-
-
-@register_node
-class directive(docutils.nodes.Element):
-    pass
-
-
-class generic_directive(docutils.parsers.rst.Directive):
-    def run(self):
-        return [directive(directive=self)]
-
-
-# Add support for common directives.
-
-
-def identity(x):
-    return x
-
-
-def register_directive(name):
-    def proc(cls):
-        # Make sure all arguments are passed through without change.
-        cls.option_spec = {k: identity for k in cls.option_spec}
-        directives.register_directive(name, cls)
-
-    return proc
-
-
-@register_directive("toctree")
-class toctree_directive(generic_directive, sphinx.directives.other.TocTree):
-    pass
-
-
-# `list-table` directives are parsed as table nodes and could be formatted as such, but that's
-# vulnerable to producing malformed tables when the given column widths are too small. TODO: The
-# contents of some directives, including `list-table`, should be parsed and formatted as normal
-# reST, but we currently dump all directive bodies unchanged.
-@register_directive("list-table")
-class listtable_directive(generic_directive, directives.tables.ListTable):
-    pass
-
-
-for d in [
-    sphinx.ext.autodoc.ClassDocumenter,
-    sphinx.ext.autodoc.ModuleDocumenter,
-    sphinx.ext.autodoc.FunctionDocumenter,
-    sphinx.ext.autodoc.MethodDocumenter,
-]:
-
-    register_directive("auto" + d.objtype)(
-        type(
-            f"autodoc_{d.objtype}_directive",
-            (generic_directive, sphinx.ext.autodoc.directive.AutodocDirective),
-            {"option_spec": d.option_spec},
-        )
-    )
-
-
-try:
-    import sphinxarg.ext
-
-    @register_directive("argparse")
-    class argparse_directive(generic_directive, sphinxarg.ext.ArgParseDirective):
-        pass
-
-
-except ImportError:
-    pass
-
-
-@register_directive("contents")
-class contents_directive(generic_directive, directives.parts.Contents):
-    pass
-
-
-@register_node
-class role(docutils.nodes.Element):
-    def __init__(self, rawtext, escaped_text, **options):
-        super().__init__(rawtext, escaped_text=escaped_text, options=options)
+from . import rst_extras
 
 
 class DumpVisitor(docutils.nodes.GenericNodeVisitor):
@@ -661,9 +573,7 @@ def main():
 
     if args.width <= 0:
         args.width = None
-
-    for r in ["class", "download", "func", "ref", "superscript"]:
-        roles.register_canonical_role(r, roles.GenericRole(r, role))
+    rst_extras.register()
 
     STDIN = "-"
 
