@@ -116,7 +116,8 @@ class DumpVisitor(docutils.nodes.GenericNodeVisitor):
 # Constants.
 
 
-section_chars = '=-~^"'
+# The non-overlined characters from https://devguide.python.org/documenting/#sections, plus some.
+section_chars = '=-^"~+'
 
 # https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#inline-markup-recognition-rules
 space_chars = set(string.whitespace)
