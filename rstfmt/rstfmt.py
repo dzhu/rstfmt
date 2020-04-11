@@ -7,6 +7,7 @@ import itertools
 import re
 import string
 import sys
+import warnings
 from collections import namedtuple
 
 import docutils
@@ -104,18 +105,21 @@ class role(docutils.nodes.Element):
 
 
 class DumpVisitor(docutils.nodes.GenericNodeVisitor):
-    def __init__(self, document):
+    def __init__(self, document, file=None):
         super().__init__(document)
         self.depth = 0
+        self.file = file or sys.stdout
 
     def default_visit(self, node):
         t = type(node).__name__
-        print("    " * self.depth + f"- \x1b[34m{t}\x1b[m", end=" ")
+        print("    " * self.depth + f"- \x1b[34m{t}\x1b[m", end=" ", file=self.file)
         if isinstance(node, docutils.nodes.Text):
-            print(repr(node.astext()[:100]), end="")
+            print(repr(node.astext()[:100]), end="", file=self.file)
         else:
-            print({k: v for k, v in node.attributes.items() if v}, end="")
-        print()
+            print(
+                {k: v for k, v in node.attributes.items() if v}, end="", file=self.file
+            )
+        print(file=self.file)
 
         self.depth += 1
 
@@ -592,8 +596,8 @@ def parse_string(s):
     return doc
 
 
-def dump_node(node):
-    node.walkabout(DumpVisitor(node))
+def dump_node(node, file):
+    node.walkabout(DumpVisitor(node, file))
 
 
 def node_eq(d1, d2):
@@ -622,10 +626,10 @@ def run_test(doc):
         doc2 = parse_string(output)
         output2 = format_node(width, doc2)
 
-        with open("/tmp/dump1.txt", "w") as f, contextlib.redirect_stdout(f):
-            dump_node(doc)
-        with open("/tmp/dump2.txt", "w") as f, contextlib.redirect_stdout(f):
-            dump_node(doc2)
+        with open("/tmp/dump1.txt", "w") as f:
+            dump_node(doc, f)
+        with open("/tmp/dump2.txt", "w") as f:
+            dump_node(doc2, f)
 
         with open("/tmp/out1.txt", "w") as f:
             print(output, file=f)
@@ -639,8 +643,8 @@ def run_test(doc):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--in-place", action="store_true")
+    parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("-w", "--width", type=int, default=72)
-    parser.add_argument("-q", "--quiet", action="store_true")
     parser.add_argument("--test", action="store_true")
     parser.add_argument("files", nargs="*")
     args = parser.parse_args()
@@ -651,20 +655,28 @@ def main():
     for r in ["class", "download", "func", "ref", "superscript"]:
         roles.register_canonical_role(r, roles.GenericRole(r, role))
 
-    for fn in args.files or ["-"]:
-        cm = nullcontext(sys.stdin) if fn == "-" else open(fn)
+    STDIN = "-"
+
+    for fn in args.files or [STDIN]:
+        cm = nullcontext(sys.stdin) if fn == STDIN else open(fn)
         with cm as f:
             doc = parse_string(f.read())
 
-        if not args.quiet:
-            print("=" * 60, fn)
-            dump_node(doc)
+        if args.verbose:
+            print("=" * 60, fn, file=sys.stderr)
+            dump_node(doc, sys.stderr)
 
         if args.test:
             run_test(doc)
 
         output = format_node(args.width, doc)
 
-        cm = open(fn, "w") if args.in_place else nullcontext(sys.stdout)
+        if fn != STDIN and args.in_place:
+            cm = open(fn, "w")
+        else:
+            cm = nullcontext(sys.stdout)
+            if fn == STDIN and args.in_place:
+                warnings.warn("Cannot edit stdin in place; writing to stdout!")
+
         with cm as f:
             print(output, file=f)
