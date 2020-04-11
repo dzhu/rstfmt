@@ -176,7 +176,9 @@ class FormatContext(
     namedtuple("FormatContextBase", ["section_depth", "width", "bullet", "colwidths"])
 ):
     def indent(self, n):
-        return self._replace(width=self.width - n)
+        if self.width is None:
+            return self
+        return self._replace(width=max(1, self.width - n))
 
     def in_section(self):
         return self._replace(section_depth=self.section_depth + 1)
@@ -275,7 +277,7 @@ def wrap_text(width, items):
 
     words = (word.text for word in words if word.text)
 
-    if width <= 0:
+    if width is None:
         yield " ".join(words)
         return
 
@@ -283,7 +285,7 @@ def wrap_text(width, items):
     n = 0
     for w in words:
         n2 = n + bool(buf) + len(w)
-        if n2 > width:
+        if buf and n2 > width:
             yield " ".join(buf)
             buf = []
             n2 = len(w)
@@ -616,6 +618,9 @@ def main():
     parser.add_argument("--test", action="store_true")
     parser.add_argument("files", nargs="*")
     args = parser.parse_args()
+
+    if args.width <= 0:
+        args.width = None
 
     for r in ["class", "download", "func", "ref", "superscript"]:
         roles.register_canonical_role(r, roles.GenericRole(r, role))
