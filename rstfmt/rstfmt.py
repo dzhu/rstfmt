@@ -4,6 +4,7 @@ import argparse
 import contextlib
 import functools
 import itertools
+import re
 import string
 import sys
 from collections import namedtuple
@@ -484,13 +485,25 @@ class Formatters:
     @staticmethod
     def reference(node, ctx: FormatContext):
         title = node.children[0].astext()
-        uri = node.attributes["refuri"]
-        # Do a basic check for standalone hyperlinks.
-        if uri == title or uri == "mailto:" + title:
-            yield inline_markup(title)
+
+        if "refuri" in node.attributes:
+            uri = node.attributes["refuri"]
+            # Do a basic check for standalone hyperlinks.
+            if uri == title or uri == "mailto:" + title:
+                yield inline_markup(title)
+            else:
+                suffix = "_" if "target" in node.attributes else "__"
+                yield inline_markup(f"`{title} <{uri}>`{suffix}")
         else:
-            suffix = "_" if "target" in node.attributes else "__"
-            yield inline_markup(f"`{title} <{uri}>`{suffix}")
+            # Reference names can consist of "alphanumerics plus isolated (no two adjacent) internal
+            # hyphens, underscores, periods, colons and plus signs", according to
+            # https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#reference-names.
+            is_single_word = re.match("^[-_.:+a-zA-Z]+$", title) and not re.search(
+                "[-_.:+][-_.:+]", title
+            )
+            if not is_single_word:
+                title = "`" + title + "`"
+            yield inline_markup(title + "_")
 
     @staticmethod
     def role(node, ctx: FormatContext):
@@ -502,8 +515,12 @@ class Formatters:
 
     @staticmethod
     def target(node, ctx: FormatContext):
+        try:
+            body = " " + node.attributes["refuri"]
+        except KeyError:
+            body = ""
         if isinstance(node.parent, (docutils.nodes.document, docutils.nodes.section)):
-            yield f".. _{node.attributes['names'][0]}:"
+            yield f".. _{node.attributes['names'][0]}:" + body
 
     @staticmethod
     def comment(node, ctx: FormatContext):
