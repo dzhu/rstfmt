@@ -1,41 +1,12 @@
-#!/usr/bin/env python
-
-import argparse
-import contextlib
-import functools
 import itertools
 import re
 import string
-import sys
-import warnings
 from collections import namedtuple
 
 import docutils
 import docutils.parsers.rst
 
 from . import rst_extras
-
-
-class DumpVisitor(docutils.nodes.GenericNodeVisitor):
-    def __init__(self, document, file=None):
-        super().__init__(document)
-        self.depth = 0
-        self.file = file or sys.stdout
-
-    def default_visit(self, node):
-        t = type(node).__name__
-        print("    " * self.depth + f"- \x1b[34m{t}\x1b[m", end=" ", file=self.file)
-        if isinstance(node, docutils.nodes.Text):
-            print(repr(node.astext()[:100]), end="", file=self.file)
-        else:
-            print({k: v for k, v in node.attributes.items() if v}, end="", file=self.file)
-        print(file=self.file)
-
-        self.depth += 1
-
-    def default_departure(self, node):
-        self.depth -= 1
-
 
 # Constants.
 
@@ -115,18 +86,6 @@ class FormatContext(
 
     def with_colwidths(self, c):
         return self._replace(colwidths=c)
-
-
-# Define this here to support Python <3.7.
-class nullcontext(contextlib.AbstractContextManager):
-    def __init__(self, enter_result=None):
-        self.enter_result = enter_result
-
-    def __enter__(self):
-        return self.enter_result
-
-    def __exit__(self, *excinfo):
-        pass
 
 
 class inline_markup:
@@ -494,92 +453,3 @@ def parse_string(s):
     preproc(doc)
 
     return doc
-
-
-def dump_node(node, file):
-    node.walkabout(DumpVisitor(node, file))
-
-
-def node_eq(d1, d2):
-    if type(d1) is not type(d2):
-        print("different type")
-        return False
-    if len(d1.children) != len(d2.children):
-        print("different num children")
-        for i, c in enumerate(d1.children):
-            print(1, i, c)
-        for i, c in enumerate(d2.children):
-            print(2, i, c)
-        return False
-    if not all(node_eq(c1, c2) for c1, c2 in zip(d1.children, d2.children)):
-        return False
-    return True
-
-
-def run_test(doc):
-    if isinstance(doc, str):
-        doc = parse_string(doc)
-
-    for width in [1, 2, 3, 5, 8, 13, 34, 55, 89, 144, 72, None]:
-        output = format_node(width, doc)
-        doc2 = parse_string(output)
-        output2 = format_node(width, doc2)
-
-        try:
-            assert node_eq(doc, doc2)
-            assert output == output2
-        except AssertionError:
-            with open("/tmp/dump1.txt", "w") as f:
-                dump_node(doc, f)
-            with open("/tmp/dump2.txt", "w") as f:
-                dump_node(doc2, f)
-
-            with open("/tmp/out1.txt", "w") as f:
-                print(output, file=f)
-            with open("/tmp/out2.txt", "w") as f:
-                print(output2, file=f)
-
-            raise
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--in-place", action="store_true")
-    parser.add_argument("-v", "--verbose", action="store_true")
-    parser.add_argument("-w", "--width", type=int, default=72)
-    parser.add_argument("--test", action="store_true")
-    parser.add_argument("files", nargs="*")
-    args = parser.parse_args()
-
-    if args.width <= 0:
-        args.width = None
-    rst_extras.register()
-
-    STDIN = "-"
-
-    for fn in args.files or [STDIN]:
-        cm = nullcontext(sys.stdin) if fn == STDIN else open(fn)
-        with cm as f:
-            doc = parse_string(f.read())
-
-        if args.verbose:
-            print("=" * 60, fn, file=sys.stderr)
-            dump_node(doc, sys.stderr)
-
-        if args.test:
-            try:
-                run_test(doc)
-            except AssertionError as e:
-                raise AssertionError(f"Failed consistency test on {fn}!") from e
-
-        output = format_node(args.width, doc)
-
-        if fn != STDIN and args.in_place:
-            cm = open(fn, "w")
-        else:
-            cm = nullcontext(sys.stdout)
-            if fn == STDIN and args.in_place:
-                warnings.warn("Cannot edit stdin in place; writing to stdout!")
-
-        with cm as f:
-            print(output, file=f)

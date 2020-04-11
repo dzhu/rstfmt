@@ -9,5 +9,5 @@ setup(
     packages=["rstfmt"],
     python_requires=">=3.6",
     install_requires=["sphinx>=2.4.0",],
-    entry_points={"console_scripts": ["rstfmt = rstfmt.rstfmt:main"]},
+    entry_points={"console_scripts": ["rstfmt = rstfmt.main:main"]},
 )
