@@ -488,7 +488,13 @@ class Formatters:
 
     @staticmethod
     def reference(node, ctx: FormatContext):
-        title = node.children[0].astext()
+        title = " ".join(wrap_text(0, chain(fmt_children(node, ctx))))
+        anonymous = (
+            ("target" not in node.attributes)
+            if "refuri" in node.attributes
+            else (node.attributes.get("anonymous"))
+        )
+        suffix = "__" if anonymous else "_"
 
         if "refuri" in node.attributes:
             uri = node.attributes["refuri"]
@@ -496,18 +502,20 @@ class Formatters:
             if uri == title or uri == "mailto:" + title:
                 yield inline_markup(title)
             else:
-                suffix = "_" if "target" in node.attributes else "__"
                 yield inline_markup(f"`{title} <{uri}>`{suffix}")
         else:
             # Reference names can consist of "alphanumerics plus isolated (no two adjacent) internal
             # hyphens, underscores, periods, colons and plus signs", according to
             # https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#reference-names.
-            is_single_word = re.match("^[-_.:+a-zA-Z]+$", title) and not re.search(
-                "[-_.:+][-_.:+]", title
+            is_single_word = (
+                re.match("^[-_.:+a-zA-Z]+$", title) and not re.search("[-_.:+][-_.:+]", title)
+            ) or (
+                len(node.children) == 1
+                and isinstance(node.children[0], docutils.nodes.substitution_reference)
             )
             if not is_single_word:
                 title = "`" + title + "`"
-            yield inline_markup(title + "_")
+            yield inline_markup(title + suffix)
 
     @staticmethod
     def role(node, ctx: FormatContext):
