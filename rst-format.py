@@ -421,9 +421,6 @@ class Formatters:
     # Tables.
     @staticmethod
     def row(node, ctx: FormatContext):
-        # sep = "|" + "|".join(" " * w for w in ctx.colwidths) + "|"
-        # yield sep
-
         all_lines = [
             chain_intersperse("", fmt_children(entry, ctx.with_width(w - 2)))
             for entry, w in zip(node.children, ctx.colwidths)
@@ -545,7 +542,6 @@ def fmt(node, ctx: FormatContext):
         type(node).__name__,
         lambda _, __: ["\x1b[35m{}\x1b[m".format(type(node).__name__.upper())],
     )
-    # print(type(node).__name__, list(func(node, ctx)))
     return func(node, ctx)
 
 
@@ -557,15 +553,12 @@ def main(args):
     parser.add_argument("files", nargs="*")
     args = parser.parse_args(args)
 
-    if not args.files:
-        args.files = ["-"]
-
     for r in ["class", "download", "func", "ref", "superscript"]:
         roles.register_canonical_role(r, roles.GenericRole(r, role))
 
     parser = docutils.parsers.rst.Parser()
 
-    for fn in args.files:
+    for fn in args.files or ["-"]:
         doc = docutils.utils.new_document(
             "",
             settings=docutils.frontend.OptionParser(
@@ -582,7 +575,6 @@ def main(args):
         if not args.quiet:
             print("=" * 60, fn)
             doc.walkabout(DumpVisitor(doc))
-            # doc.walkabout(FormatVisitor(doc))
 
         cm = open(fn, "w") if args.in_place else nullcontext(sys.stdout)
         with cm as f:
