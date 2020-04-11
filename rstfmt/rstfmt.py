@@ -567,11 +567,52 @@ def dump_node(node):
     node.walkabout(DumpVisitor(node))
 
 
+def node_eq(d1, d2):
+    print("check \x1b[34m{}\x1b[m \x1b[32m{}\x1b[m".format(d1, d2))
+    if type(d1) is not type(d2):
+        print("different type")
+        return False
+    if len(d1.children) != len(d2.children):
+        print("different num children")
+        for i, c in enumerate(d1.children):
+            print(1, i, c)
+        for i, c in enumerate(d2.children):
+            print(2, i, c)
+        return False
+    if not all(node_eq(c1, c2) for c1, c2 in zip(d1.children, d2.children)):
+        return False
+    return True
+
+
+def run_test(doc):
+    if isinstance(doc, str):
+        doc = parse_string(doc)
+
+    for width in [1, 2, 3, 5, 8, 13, 34, 55, 89, 144, 72, None]:
+        output = format_node(width, doc)
+        doc2 = parse_string(output)
+        output2 = format_node(width, doc2)
+
+        with open("/tmp/dump1.txt", "w") as f, contextlib.redirect_stdout(f):
+            dump_node(doc)
+        with open("/tmp/dump2.txt", "w") as f, contextlib.redirect_stdout(f):
+            dump_node(doc2)
+
+        with open("/tmp/out1.txt", "w") as f:
+            print(output, file=f)
+        with open("/tmp/out2.txt", "w") as f:
+            print(output2, file=f)
+
+        assert node_eq(doc, doc2)
+        assert output == output2
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--in-place", action="store_true")
     parser.add_argument("-w", "--width", type=int, default=72)
     parser.add_argument("-q", "--quiet", action="store_true")
+    parser.add_argument("--test", action="store_true")
     parser.add_argument("files", nargs="*")
     args = parser.parse_args()
 
@@ -586,6 +627,9 @@ def main():
         if not args.quiet:
             print("=" * 60, fn)
             dump_node(doc)
+
+        if args.test:
+            run_test(doc)
 
         output = format_node(args.width, doc)
 
