@@ -27,18 +27,11 @@ class role(docutils.nodes.Element):
         super().__init__(rawtext, escaped_text=escaped_text, options=options)
 
 
-# Add support for common directives.
+_new_directives = []
 
 
-# `list-table` directives are parsed as table nodes and could be formatted as such, but that's
-# vulnerable to producing malformed tables when the given column widths are too small. TODO: The
-# contents of some directives, including `list-table`, should be parsed and formatted as normal
-# reST, but we currently dump all directive bodies unchanged.
-_new_directives = [
-    ("list-table", directives.tables.ListTable, None),
-    ("contents", directives.parts.Contents, None),
-    ("toctree", sphinx.directives.other.TocTree, None),
-]
+def _add_directive(name, cls, option_spec=None, raw=True):
+    _new_directives.append((name, cls, option_spec, raw))
 
 
 def _subclasses(cls):
@@ -47,15 +40,28 @@ def _subclasses(cls):
         yield from _subclasses(c)
 
 
+# Add support for common directives.
+
+
+# `list-table` directives are parsed into table nodes by default and could be formatted as such, but
+# that's vulnerable to producing malformed tables when the given column widths are too small.
+_add_directive("list-table", directives.tables.ListTable, raw=False)
+
+_add_directive("contents", directives.parts.Contents)
+_add_directive("toctree", sphinx.directives.other.TocTree)
+
+
 for d in set(_subclasses(autodoc.Documenter)):
-    if d.objtype == "object":
-        continue
-    _new_directives.append(("auto" + d.objtype, autodoc.directive.AutodocDirective, d.option_spec))
+    if d.objtype != "object":
+        _add_directive(
+            "auto" + d.objtype, autodoc.directive.AutodocDirective, option_spec=d.option_spec
+        )
+
 
 try:
     import sphinxarg.ext
 
-    _new_directives.append(("argparse", sphinxarg.ext.ArgParseDirective, None))
+    _add_directive("argparse", sphinxarg.ext.ArgParseDirective)
 except ImportError:
     pass
 
@@ -67,10 +73,10 @@ def register():
         roles.register_canonical_role(r, roles.GenericRole(r, role))
 
     identity = lambda x: x
-    directive_run = lambda self: [directive(directive=self)]
+    run = lambda self: [directive(directive=self)]
 
-    for name, cls, option_spec in _new_directives:
+    for name, cls, option_spec, raw in _new_directives:
         if option_spec is None:
             option_spec = cls.option_spec
-        namespace = {"option_spec": {k: identity for k in option_spec}, "run": directive_run}
+        namespace = {"option_spec": {k: identity for k in option_spec}, "run": run, "raw": raw}
         directives.register_directive(name, type("rstfmt_" + cls.__name__, (cls,), namespace))

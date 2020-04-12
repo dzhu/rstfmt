@@ -283,7 +283,13 @@ class Formatters:
         # Just rely on the order being stable, hopefully.
         for k, v in d.options.items():
             yield f"   :{k}:" if v is None else f"   :{k}: {v}"
-        yield from prepend_if_any("", with_spaces(3, d.content))
+
+        if d.raw:
+            yield from prepend_if_any("", with_spaces(3, d.content))
+        else:
+            sub_doc = parse_string("\n".join(d.content))
+            yield ""
+            yield from with_spaces(3, fmt(sub_doc, ctx.indent(3)))
 
     @staticmethod
     def section(node, ctx: FormatContext):
