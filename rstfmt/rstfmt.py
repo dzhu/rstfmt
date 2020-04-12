@@ -417,12 +417,17 @@ class Formatters:
 
     @staticmethod
     def target(node, ctx: FormatContext):
+        if not isinstance(node.parent, (docutils.nodes.document, docutils.nodes.section)):
+            return
         try:
             body = " " + node.attributes["refuri"]
         except KeyError:
             body = ""
-        if isinstance(node.parent, (docutils.nodes.document, docutils.nodes.section)):
-            yield f".. _{node.attributes['names'][0]}:" + body
+        if node.attributes.get("anonymous"):
+            head = "__ .."
+        else:
+            head = f".. _{node.attributes['names'][0]}:"
+        yield head + body
 
     @staticmethod
     def comment(node, ctx: FormatContext):
