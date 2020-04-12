@@ -222,12 +222,20 @@ class Formatters:
 
     # Lists.
     @staticmethod
+    def _list(node, ctx: FormatContext):
+        subs = [list(fmt(c, ctx)) for c in node.children]
+        if any(len(s) > 2 for s in subs):
+            yield from chain_intersperse("", subs)
+        else:
+            yield from chain(subs)
+
+    @staticmethod
     def bullet_list(node, ctx: FormatContext):
-        yield from chain_intersperse("", fmt_children(node, ctx.with_bullet("- ")))
+        yield from Formatters._list(node, ctx.with_bullet("- "))
 
     @staticmethod
     def enumerated_list(node, ctx: FormatContext):
-        yield from chain_intersperse("", fmt_children(node, ctx.with_bullet("#.")))
+        yield from Formatters._list(node, ctx.with_bullet("#."))
 
     @staticmethod
     def list_item(node, ctx: FormatContext):
