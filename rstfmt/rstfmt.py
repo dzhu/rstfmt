@@ -220,7 +220,7 @@ class Formatters:
     def title_reference(node, ctx: FormatContext):
         yield inline_markup("`" + "".join(chain(fmt_children(node, ctx))) + "`")
 
-    # Lists.
+    # Basic lists.
     @staticmethod
     def _list(node, ctx: FormatContext):
         subs = [list(fmt(c, ctx)) for c in node.children]
@@ -246,6 +246,7 @@ class Formatters:
         for first, c in enum_first(chain_intersperse("", fmt_children(node, ctx))):
             yield ((b if first else s) if c else "") + c
 
+    # Definition lists.
     @staticmethod
     def term(node, ctx: FormatContext):
         yield " ".join(wrap_text(0, chain(fmt_children(node, ctx))))
@@ -264,6 +265,24 @@ class Formatters:
 
     @staticmethod
     def definition_list(node, ctx: FormatContext):
+        yield from chain_intersperse("", fmt_children(node, ctx))
+
+    # Field lists.
+    @staticmethod
+    def field_name(node, ctx: FormatContext):
+        text = " ".join(wrap_text(0, chain(fmt_children(node, ctx))))
+        yield f":{text}:"
+
+    @staticmethod
+    def field_body(node, ctx: FormatContext):
+        yield from with_spaces(3, chain(fmt_children(node, ctx.indent(3))))
+
+    @staticmethod
+    def field(node, ctx: FormatContext):
+        yield from chain(fmt_children(node, ctx))
+
+    @staticmethod
+    def field_list(node, ctx: FormatContext):
         yield from chain_intersperse("", fmt_children(node, ctx))
 
     # Structure.
