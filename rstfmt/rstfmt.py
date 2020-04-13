@@ -471,11 +471,10 @@ class Formatters:
 
 
 def fmt(node, ctx: FormatContext):
-    func = getattr(
-        Formatters,
-        type(node).__name__,
-        lambda _, __: ["\x1b[35m{}\x1b[m".format(type(node).__name__.upper())],
-    )
+    try:
+        func = getattr(Formatters, type(node).__name__)
+    except AttributeError:
+        raise ValueError(f"Unknown node type {type(node).__name__}!")
     return func(node, ctx)
 
 
