@@ -287,6 +287,10 @@ class Formatters:
 
     # Structure.
     @staticmethod
+    def transition(node, ctx: FormatContext):
+        yield "----"
+
+    @staticmethod
     def paragraph(node, ctx: FormatContext):
         yield from wrap_text(ctx.width, chain(fmt_children(node, ctx)))
 
