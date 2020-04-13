@@ -1,0 +1,53 @@
+rstfmt: a formatter for reStructuredText
+========================================
+
+*Not to be confused with* rustfmt_.
+
+*Highly experimental and unstable. Do not depend on this yet.*
+
+Description
+-----------
+
+rstfmt is a tool for automatically formatting reStructuredText_ files in
+a consistent way.
+
+Like Black_ and gofmt_, the motivation is to provide a format that is
+reasonable and minimally configurable to prevent teams from wasting time
+on style discussions (or individuals on manually doing formatting, for
+that matter).
+
+Currently, rstfmt is in an *extremely* early stage of development. Not
+all reST constructs are covered and the interface or formatting may
+change at any time without warning.
+
+Usage
+-----
+
+.. code:: sh
+
+   # Install.
+   pip install https://github.com/dzhu/rstfmt
+
+   # Read a file from stdin and write the formatted version to stdout.
+   rstfmt
+
+   # Format the given files, printing all output to stdout.
+   rstfmt <file>...
+
+   # Format the given files in place.
+   rstfmt -i <file>...
+
+   # Wrap paragraphs to the given line length (default 72).
+   rstfmt -w <width>
+
+.. _black: https://github.com/psf/black
+
+.. _docutils: https://docutils.sourceforge.io/
+
+.. _gofmt: https://blog.golang.org/gofmt
+
+.. _pandoc: https://pandoc.org/
+
+.. _restructuredtext: https://docutils.sourceforge.io/docs/user/rst/quickstart.html
+
+.. _rustfmt: https://github.com/rust-lang/rustfmt
