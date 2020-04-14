@@ -1,11 +1,20 @@
+import os
+
 from setuptools import setup
+
+with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "README.rst")) as f:
+    long_description = f.read()
 
 setup(
     name="rstfmt",
     version="0.0.1",
     author="Danny Zhu",
-    description="rstfmt",
-    long_description="An autoformatter for reStructuredText",
+    url="https://github.com/dzhu/rstfmt",
+    description="A formatter for reStructuredText",
+    long_description=long_description,
+    long_description_content_type="text/x-rst",
+    license="MIT",
+    classifiers=["License :: OSI Approved :: MIT License"],
     packages=["rstfmt"],
     python_requires=">=3.6",
     install_requires=["sphinx>=2.4.0",],
