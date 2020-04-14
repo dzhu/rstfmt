@@ -479,7 +479,9 @@ def fmt(node, ctx: FormatContext):
 
 
 def format_node(width, node):
-    return "\n".join(fmt(node, FormatContext(0, width, None, None)))
+    if width <= 0:
+        width = None
+    return "\n".join(fmt(node, FormatContext(0, width, None, None))) + "\n"
 
 
 def parse_string(s):

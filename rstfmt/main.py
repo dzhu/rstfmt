@@ -27,8 +27,6 @@ def main():
     parser.add_argument("files", nargs="*")
     args = parser.parse_args()
 
-    if args.width <= 0:
-        args.width = None
     rst_extras.register()
 
     STDIN = "-"
