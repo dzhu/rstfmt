@@ -40,7 +40,27 @@ Usage
    # Wrap paragraphs to the given line length (default 72).
    rstfmt -w <width>
 
+Like Black's blackd_, there is also a daemon that provides formatting
+via HTTP requests to avoid the cost of starting and importing everything
+on every run.
+
+.. code:: sh
+
+   # Install.
+   pip install https://github.com/dzhu/rstfmt[d]
+
+   # Start the daemon (binds to localhost:5219 by default).
+   rstfmtd --bind-host=<host> --bind-port=<port>
+
+   # Print the formatted version of a file.
+   curl http://locahost:5219 --data-binary @<file>
+
+   # Specify the line length (default 72).
+   curl -H 'X-Line-Length: 72' http://locahost:5219 --data-binary @<file>
+
 .. _black: https://github.com/psf/black
+
+.. _blackd: https://github.com/psf/black#blackd
 
 .. _docutils: https://docutils.sourceforge.io/
 
