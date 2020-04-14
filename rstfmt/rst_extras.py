@@ -48,6 +48,7 @@ def _subclasses(cls):
 _add_directive("list-table", directives.tables.ListTable, raw=False)
 
 _add_directive("contents", directives.parts.Contents)
+_add_directive("include", directives.misc.Include)
 _add_directive("toctree", sphinx.directives.other.TocTree)
 
 

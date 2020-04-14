@@ -486,12 +486,13 @@ def format_node(width, node):
 
 def parse_string(s):
     parser = docutils.parsers.rst.Parser()
-    doc = docutils.utils.new_document(
-        "",
-        settings=docutils.frontend.OptionParser(
-            components=(docutils.parsers.rst.Parser,)
-        ).get_default_values(),
-    )
+    settings = docutils.frontend.OptionParser(
+        components=[docutils.parsers.rst.Parser,]
+    ).get_default_values()
+    settings.report_level = docutils.utils.Reporter.SEVERE_LEVEL
+    settings.halt_level = docutils.utils.Reporter.WARNING_LEVEL
+    settings.file_insertion_enabled = False
+    doc = docutils.utils.new_document("", settings=settings)
     parser.parse(s, doc)
     preproc(doc)
 
