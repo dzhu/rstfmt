@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import enum
 import functools
+import logging
 import sys
 import time
 from concurrent import futures
@@ -36,8 +37,10 @@ async def handle(pool, req):
         text = await asyncio.get_event_loop().run_in_executor(pool, do_format, width, body)
         resp = web.Response(text=text)
     except ParseError as e:
+        logging.warning(f"Failed to parse input: {e}")
         resp = web.Response(status=400, reason=str(e))
     except Exception as e:
+        logging.exception("Error while handling request")
         resp = web.Response(status=500, reason=str(e))
 
     t1 = time.perf_counter()
