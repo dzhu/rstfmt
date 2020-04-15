@@ -26,7 +26,10 @@ Usage
 .. code:: sh
 
    # Install.
-   pip install https://github.com/dzhu/rstfmt
+   pip install git+https://github.com/dzhu/rstfmt
+
+   # Install from PyPI (but releases there may be out-of-date).
+   pip install rstfmt
 
    # Read a file from stdin and write the formatted version to stdout.
    rstfmt
