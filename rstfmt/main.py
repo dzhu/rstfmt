@@ -56,7 +56,7 @@ def main():
                 warnings.warn("Cannot edit stdin in place; writing to stdout!")
 
         with cm as f:
-            print(output, file=f)
+            f.write(output)
 
 
 if __name__ == "__main__":
