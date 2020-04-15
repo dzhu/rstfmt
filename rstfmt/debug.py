@@ -30,10 +30,28 @@ def dump_node(node, file):
     node.walkabout(DumpVisitor(node, file))
 
 
+def iter_descendants(node):
+    for c in node.children:
+        yield c
+        yield from iter_descendants(c)
+
+
+def text_contents(node):
+    return "".join(n.astext() for n in iter_descendants(node) if isinstance(n, docutils.nodes.Text))
+
+
 def node_eq(d1, d2):
     if type(d1) is not type(d2):
         print("different type")
         return False
+    if isinstance(d1, docutils.nodes.literal_block):
+        if "python" in d1["classes"]:
+            import black
+
+            t1 = black.format_str(text_contents(d1), mode=black.FileMode())
+            t2 = black.format_str(text_contents(d2), mode=black.FileMode())
+            return t1 == t2
+
     if len(d1.children) != len(d2.children):
         print("different num children")
         for i, c in enumerate(d1.children):
