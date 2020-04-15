@@ -1,8 +1,11 @@
 import itertools
 import re
 import string
+import subprocess
+import warnings
 from collections import namedtuple
 
+import black
 import docutils
 import docutils.parsers.rst
 
@@ -196,6 +199,32 @@ def preproc(node):
 
 
 # Main stuff.
+
+
+class CodeFormatters:
+    @staticmethod
+    def python(code):
+        try:
+            code = black.format_str(code, mode=black.FileMode()).rstrip()
+        except Exception as e:
+            warnings.warn(str(e))
+        return code
+
+    @staticmethod
+    def go(code):
+        try:
+            code = subprocess.run(
+                ["gofmt"], input=code, capture_output=True, encoding="utf-8", check=True
+            ).stdout
+        except OSError as e:
+            warnings.warn(str(e))
+        except subprocess.CalledProcessError as e:
+            warnings.warn(f"gofmt failed: {e.stderr}")
+        # gofmt uses tabs; including them in the source will cause docutils to expand them out to
+        # tab stops, causing odd spacing in the rendering. Instead, we explicitly convert them into
+        # four spaces each, which matches common practice on the Go website. (There are also
+        # instances of eight, but not as many, and anyway that looks too wide.)
+        return re.sub("^\t+", lambda m: "    " * len(m.group(0)), code, flags=re.MULTILINE)
 
 
 class Formatters:
@@ -463,10 +492,19 @@ class Formatters:
 
     @staticmethod
     def literal_block(node, ctx: FormatContext):
-        lang = [c for c in node.attributes["classes"] if c != "code"]
-        yield ".. code::" + (" " + lang[0] if lang else "")
+        langs = [c for c in node.attributes["classes"] if c != "code"]
+        lang = langs[0] if langs else None
+        yield ".. code::" + (" " + lang if lang else "")
         yield ""
         text = "".join(chain(fmt_children(node, ctx)))
+
+        try:
+            func = getattr(CodeFormatters, lang)
+        except (AttributeError, TypeError):
+            pass
+        else:
+            text = func(text)
+
         yield from with_spaces(3, text.split("\n"))
 
 
