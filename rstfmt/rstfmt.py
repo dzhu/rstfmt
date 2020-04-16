@@ -539,7 +539,7 @@ def fmt(node, ctx: FormatContext):
 
 
 def format_node(width, node):
-    if width <= 0:
+    if width is not None and width <= 0:
         width = None
     return "\n".join(fmt(node, FormatContext(0, width, None, None, 0))) + "\n"
 
