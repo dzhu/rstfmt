@@ -71,7 +71,9 @@ def pairwise(iterable):
 
 
 class FormatContext(
-    namedtuple("FormatContextBase", ["section_depth", "width", "bullet", "colwidths"])
+    namedtuple(
+        "FormatContextBase", ["section_depth", "width", "bullet", "colwidths", "line_block_depth"]
+    )
 ):
     def indent(self, n):
         if self.width is None:
@@ -80,6 +82,9 @@ class FormatContext(
 
     def in_section(self):
         return self._replace(section_depth=self.section_depth + 1)
+
+    def in_line_block(self):
+        return self._replace(line_block_depth=self.line_block_depth + 1)
 
     def with_width(self, w):
         return self._replace(width=w)
@@ -406,6 +411,23 @@ class Formatters:
 
     # Misc.
     @staticmethod
+    def line(node, ctx: FormatContext):
+        if not node.children:
+            yield "|"
+            return
+
+        indent = 3 * ctx.line_block_depth
+        ctx = ctx.indent(indent)
+        prefix1 = "|" + " " * (indent - 1)
+        prefix2 = " " * indent
+        for first, line in enum_first(wrap_text(ctx.width, chain(fmt_children(node, ctx)))):
+            yield (prefix1 if first else prefix2) + line
+
+    @staticmethod
+    def line_block(node, ctx: FormatContext):
+        yield from chain(fmt_children(node, ctx.in_line_block()))
+
+    @staticmethod
     def Text(node, _: FormatContext):
         yield node.astext()
 
@@ -519,7 +541,7 @@ def fmt(node, ctx: FormatContext):
 def format_node(width, node):
     if width <= 0:
         width = None
-    return "\n".join(fmt(node, FormatContext(0, width, None, None))) + "\n"
+    return "\n".join(fmt(node, FormatContext(0, width, None, None, 0))) + "\n"
 
 
 def parse_string(s):
