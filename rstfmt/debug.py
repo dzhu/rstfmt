@@ -44,6 +44,18 @@ def node_eq(d1, d2):
     if type(d1) is not type(d2):
         print("different type")
         return False
+
+    if isinstance(d1, docutils.nodes.Text):
+        return d1.astext().split() == d2.astext().split()
+    else:
+        sentinel = object()
+        for k in ["name", "refname", "refuri"]:
+            if d1.attributes.get(k, sentinel) != d2.attributes.get(k, sentinel):
+                print("different attributes")
+                print(d1.attributes)
+                print(d2.attributes)
+                return False
+
     if isinstance(d1, docutils.nodes.literal_block):
         if "python" in d1["classes"]:
             import black
