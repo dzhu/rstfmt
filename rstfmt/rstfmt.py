@@ -194,13 +194,33 @@ def preproc(node):
     Do some node preprocessing that is generic across node types and is therefore most convenient to
     do as a simple recursive function rather than as part of the big dispatcher class.
     """
+    # Strip all system_message nodes. (Just formatting them with no markup isn't enough, since that
+    # could lead to extra spaces or empty lines between other elements.)
     node.children = [c for c in node.children if not isinstance(c, docutils.nodes.system_message)]
-    for c in node.children:
-        preproc(c)
 
+    # Match references to targets, which helps later with distinguishing whether they're anonymous.
     for a, b in pairwise(node.children):
         if isinstance(a, docutils.nodes.reference) and isinstance(b, docutils.nodes.target):
             a.attributes["target"] = b
+
+    # Sort contiguous blocks of targets by name.
+    start = None
+    for i, c in enumerate(itertools.chain(node.children, [None])):
+        in_run = start is not None
+        is_target = isinstance(c, docutils.nodes.target)
+        if in_run and not is_target:
+            # Anonymous targets have a value of `[]` for "names", which will sort to the top. Also,
+            # it's important here that `sorted` is stable, or anonymous targets could break.
+            node.children[start:i] = sorted(
+                node.children[start:i], key=lambda t: t.attributes["names"]
+            )
+            start = None
+        elif not in_run and is_target:
+            start = i
+
+    # Recurse.
+    for c in node.children:
+        preproc(c)
 
 
 # Main stuff.
