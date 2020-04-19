@@ -61,6 +61,31 @@ on every run.
    # Specify the line length (default 72).
    curl -H 'X-Line-Length: 72' http://locahost:5219 --data-binary @<file>
 
+   # Mimic the standalone tool: read from stdin, write to stdout, exit with
+   # a nonzero status code if there are errors.
+   curl -fsS http://locahost:5219 --data-binary @/dev/stdin
+
+With editors
+^^^^^^^^^^^^
+
+The default behavior of reading from stdin and writing to stdout should
+integrate well with other systems, such as on-save hooks in editors. For
+example, here's a configuration for reformatter.el_, including both
+standalone and daemon modes:
+
+.. code:: lisp
+
+   ;; Run the standalone tool.
+   (reformatter-define rstfmt
+     :program "rstfmt")
+   (add-hook 'rst-mode-hook #'rstfmt-on-save-mode)
+
+   ;; Query the daemon.
+   (reformatter-define client-rstfmt
+     :program "curl"
+     :args '("-fsS" "http://localhost:5219" "--data-binary" "@/dev/stdin"))
+   (add-hook 'rst-mode-hook #'client-rstfmt-on-save-mode)
+
 .. _black: https://github.com/psf/black
 
 .. _blackd: https://github.com/psf/black#blackd
@@ -70,6 +95,8 @@ on every run.
 .. _gofmt: https://blog.golang.org/gofmt
 
 .. _pandoc: https://pandoc.org/
+
+.. _reformatter.el: https://github.com/purcell/reformatter.el
 
 .. _restructuredtext: https://docutils.sourceforge.io/docs/user/rst/quickstart.html
 
