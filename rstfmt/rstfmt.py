@@ -498,11 +498,9 @@ class Formatters:
             body = " " + node.attributes["refuri"]
         except KeyError:
             body = ""
-        if node.attributes.get("anonymous"):
-            head = "__ .."
-        else:
-            head = f".. _{node.attributes['names'][0]}:"
-        yield head + body
+
+        name = "_" if node.attributes.get("anonymous") else node.attributes["names"][0]
+        yield f".. _{name}:{body}"
 
     @staticmethod
     def comment(node, ctx: FormatContext):
