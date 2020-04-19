@@ -454,33 +454,53 @@ class Formatters:
     @staticmethod
     def reference(node, ctx: FormatContext):
         title = " ".join(wrap_text(0, chain(fmt_children(node, ctx))))
-        anonymous = (
-            ("target" not in node.attributes)
-            if "refuri" in node.attributes
-            else (node.attributes.get("anonymous"))
-        )
-        suffix = "__" if anonymous else "_"
+        anon_suffix = lambda anonymous: "__" if anonymous else "_"
 
+        # Handle references that are also substitution references.
+        if len(node.children) == 1 and isinstance(
+            node.children[0], docutils.nodes.substitution_reference
+        ):
+            anonymous = bool(node.attributes.get("anonymous"))
+            yield inline_markup(title + anon_suffix(anonymous))
+            return
+
+        # Handle references to external URIs. They can be either standalone hyperlinks, written as
+        # just the URI, or an explicit "`text <url>`_" or "`text <url>`__".
         if "refuri" in node.attributes:
             uri = node.attributes["refuri"]
-            # Do a basic check for standalone hyperlinks.
             if uri == title or uri == "mailto:" + title:
                 yield inline_markup(title)
             else:
-                yield inline_markup(f"`{title} <{uri}>`{suffix}")
-        else:
-            # Reference names can consist of "alphanumerics plus isolated (no two adjacent) internal
-            # hyphens, underscores, periods, colons and plus signs", according to
-            # https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#reference-names.
-            is_single_word = (
-                re.match("^[-_.:+a-zA-Z]+$", title) and not re.search("[-_.:+][-_.:+]", title)
-            ) or (
-                len(node.children) == 1
-                and isinstance(node.children[0], docutils.nodes.substitution_reference)
-            )
+                anonymous = "target" not in node.attributes
+                yield inline_markup(f"`{title} <{uri}>`{anon_suffix(anonymous)}")
+            return
+
+        # Simple reference names can consist of "alphanumerics plus isolated (no two adjacent)
+        # internal hyphens, underscores, periods, colons and plus signs", according to
+        # https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#reference-names.
+        is_single_word = re.match("^[-_.:+a-zA-Z]+$", title) and not re.search(
+            "[-_.:+][-_.:+]", title
+        )
+
+        # "x__" is one of the few cases to trigger an explicit "anonymous" attribute (the other
+        # being the similar "|x|__", which is already handled above).
+        if "anonymous" in node.attributes:
             if not is_single_word:
                 title = "`" + title + "`"
-            yield inline_markup(title + suffix)
+            yield inline_markup(title + anon_suffix(True))
+            return
+
+        anonymous = "target" not in node.attributes
+        ref = node.attributes["refname"]
+        # Check whether the reference name matches the text and can be made implicit. (Reference
+        # names are case-insensitive.)
+        if anonymous and ref.lower() == title.lower():
+            if not is_single_word:
+                title = "`" + title + "`"
+            # "x_" is equivalent to "`x <x_>`__"; it's anonymous despite having a single underscore.
+            yield inline_markup(title + anon_suffix(False))
+        else:
+            yield inline_markup(f"`{title} <{ref}_>`{anon_suffix(anonymous)}")
 
     @staticmethod
     def role(node, ctx: FormatContext):
