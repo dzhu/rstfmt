@@ -507,8 +507,9 @@ class Formatters:
     @staticmethod
     def comment(node, ctx: FormatContext):
         yield ".."
-        text = "\n".join(chain(fmt_children(node, ctx)))
-        yield from with_spaces(3, text.split("\n"))
+        if node.children:
+            text = "\n".join(chain(fmt_children(node, ctx)))
+            yield from with_spaces(3, text.split("\n"))
 
     @staticmethod
     def note(node, ctx: FormatContext):
