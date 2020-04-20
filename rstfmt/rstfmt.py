@@ -224,6 +224,31 @@ def preproc(node):
         preproc(c)
 
 
+class IgnoreMessagesReporter(docutils.utils.Reporter):
+    """
+    A Docutils error reporter that ignores some messages.
+
+    We want to handle most system messages normally, but it's useful to ignore some (and just doing
+    it by level would be too coarse). In particular, having too short a title line leads to a
+    warning but parses just fine; ignoring that message means we can automatically fix lengths
+    whether they're too short or too long (though they do have to be at least four characters to be
+    parsed correctly in the first place).
+    """
+
+    ignored_messages = {
+        "Title overline too short.",
+        "Title underline too short.",
+    }
+
+    def system_message(self, level, message, *children, **kwargs):
+        orig_level = self.halt_level
+        if message in self.ignored_messages:
+            self.halt_level = docutils.utils.Reporter.SEVERE_LEVEL + 1
+        msg = super().system_message(level, message, *children, **kwargs)
+        self.halt_level = orig_level
+        return msg
+
+
 # Main stuff.
 
 
@@ -594,12 +619,13 @@ def format_node(width, node):
 def parse_string(s):
     parser = docutils.parsers.rst.Parser()
     settings = docutils.frontend.OptionParser(
-        components=[docutils.parsers.rst.Parser,]
+        components=[docutils.parsers.rst.Parser]
     ).get_default_values()
     settings.report_level = docutils.utils.Reporter.SEVERE_LEVEL
     settings.halt_level = docutils.utils.Reporter.WARNING_LEVEL
     settings.file_insertion_enabled = False
     doc = docutils.utils.new_document("", settings=settings)
+    doc.reporter = IgnoreMessagesReporter("", settings.report_level, settings.halt_level)
     parser.parse(s, doc)
     preproc(doc)
 
