@@ -14,8 +14,9 @@ from . import rst_extras
 # Constants.
 
 
-# The non-overlined characters from https://devguide.python.org/documenting/#sections, plus some.
-section_chars = '=-^"~+'
+# The characters from https://devguide.python.org/documenting/#sections.
+section_chars = '#*=-^"'
+max_overline_depth = 2
 
 # https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#inline-markup-recognition-rules
 space_chars = set(string.whitespace)
@@ -351,8 +352,15 @@ class Formatters:
     @staticmethod
     def title(node, ctx: FormatContext):
         text = " ".join(wrap_text(0, chain(fmt_children(node, ctx))))
-        yield text
-        yield section_chars[ctx.section_depth - 1] * len(text)
+        char = section_chars[ctx.section_depth - 1]
+        if ctx.section_depth <= max_overline_depth:
+            line = char * (len(text) + 2)
+            yield line
+            yield " " + text
+            yield line
+        else:
+            yield text
+            yield char * len(text)
 
     @staticmethod
     def block_quote(node, ctx: FormatContext):

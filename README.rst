@@ -1,12 +1,14 @@
-rstfmt: a formatter for reStructuredText
-========================================
+##########################################
+ rstfmt: a formatter for reStructuredText
+##########################################
 
 *Not to be confused with* rustfmt_.
 
 *Highly experimental and unstable. Do not depend on this yet.*
 
-Description
------------
+*************
+ Description
+*************
 
 rstfmt is a tool for automatically formatting reStructuredText_ files in
 a consistent way.
@@ -20,8 +22,9 @@ Currently, rstfmt is in an *extremely* early stage of development. Not
 all reST constructs are covered and the interface or formatting may
 change at any time without warning.
 
-Usage
------
+*******
+ Usage
+*******
 
 .. code:: sh
 
@@ -66,7 +69,7 @@ on every run.
    curl -fsS http://locahost:5219 --data-binary @/dev/stdin
 
 With editors
-^^^^^^^^^^^^
+============
 
 The default behavior of reading from stdin and writing to stdout should
 integrate well with other systems, such as on-save hooks in editors. For
