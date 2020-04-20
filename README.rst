@@ -22,6 +22,9 @@ Currently, rstfmt is in an *extremely* early stage of development. Not
 all reST constructs are covered and the interface or formatting may
 change at any time without warning.
 
+To get a feel for the output of rstfmt, see `the sample file
+<sample.rst>`__.
+
 *******
  Usage
 *******
