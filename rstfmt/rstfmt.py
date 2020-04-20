@@ -462,6 +462,32 @@ class Formatters:
     def table(node, ctx: FormatContext):
         yield from chain_intersperse("", fmt_children(node, ctx))
 
+    # Admonitions.
+    @staticmethod
+    def admonition(node, ctx: FormatContext):
+        title = node.children[0]
+        assert isinstance(title, docutils.nodes.title)
+        yield ".. admonition:: " + "".join(wrap_text(None, chain(fmt_children(title, ctx))))
+        yield ""
+        ctx = ctx.indent(3)
+        yield from with_spaces(3, chain_intersperse("", (fmt(c, ctx) for c in node.children[1:])))
+
+    @staticmethod
+    def _sub_admonition(node, ctx: FormatContext):
+        yield f".. {node.tagname}::"
+        yield ""
+        yield from with_spaces(3, chain_intersperse("", fmt_children(node, ctx.indent(3))))
+
+    attention = _sub_admonition
+    caution = _sub_admonition
+    danger = _sub_admonition
+    error = _sub_admonition
+    hint = _sub_admonition
+    important = _sub_admonition
+    note = _sub_admonition
+    tip = _sub_admonition
+    warning = _sub_admonition
+
     # Misc.
     @staticmethod
     def line(node, ctx: FormatContext):
@@ -561,24 +587,6 @@ class Formatters:
         if node.children:
             text = "\n".join(chain(fmt_children(node, ctx)))
             yield from with_spaces(3, text.split("\n"))
-
-    @staticmethod
-    def note(node, ctx: FormatContext):
-        yield ".. note::"
-        yield ""
-        yield from with_spaces(3, chain_intersperse("", fmt_children(node, ctx.indent(3))))
-
-    @staticmethod
-    def warning(node, ctx: FormatContext):
-        yield ".. warning::"
-        yield ""
-        yield from with_spaces(3, chain_intersperse("", fmt_children(node, ctx.indent(3))))
-
-    @staticmethod
-    def hint(node, ctx: FormatContext):
-        yield ".. hint::"
-        yield ""
-        yield from with_spaces(3, chain_intersperse("", fmt_children(node, ctx.indent(3))))
 
     @staticmethod
     def image(node, ctx: FormatContext):
