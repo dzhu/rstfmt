@@ -138,6 +138,9 @@ def split_words(item):
 
 
 def wrap_text(width, items):
+    if width is not None and width <= 0:
+        raise ValueError(f"Invalid width {width}")
+
     items = list(items)
     raw_words = list(chain(map(split_words, items)))
 
@@ -329,7 +332,7 @@ class Formatters:
     # Definition lists.
     @staticmethod
     def term(node, ctx: FormatContext):
-        yield " ".join(wrap_text(0, chain(fmt_children(node, ctx))))
+        yield " ".join(wrap_text(None, chain(fmt_children(node, ctx))))
 
     @staticmethod
     def definition(node, ctx: FormatContext):
@@ -350,7 +353,7 @@ class Formatters:
     # Field lists.
     @staticmethod
     def field_name(node, ctx: FormatContext):
-        text = " ".join(wrap_text(0, chain(fmt_children(node, ctx))))
+        text = " ".join(wrap_text(None, chain(fmt_children(node, ctx))))
         yield f":{text}:"
 
     @staticmethod
@@ -376,7 +379,7 @@ class Formatters:
 
     @staticmethod
     def title(node, ctx: FormatContext):
-        text = " ".join(wrap_text(0, chain(fmt_children(node, ctx))))
+        text = " ".join(wrap_text(None, chain(fmt_children(node, ctx))))
         char = section_chars[ctx.section_depth - 1]
         if ctx.section_depth <= max_overline_depth:
             line = char * (len(text) + 2)
@@ -512,7 +515,7 @@ class Formatters:
 
     @staticmethod
     def reference(node, ctx: FormatContext):
-        title = " ".join(wrap_text(0, chain(fmt_children(node, ctx))))
+        title = " ".join(wrap_text(None, chain(fmt_children(node, ctx))))
         anon_suffix = lambda anonymous: "__" if anonymous else "_"
 
         # Handle references that are also substitution references.
