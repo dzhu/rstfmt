@@ -1,4 +1,5 @@
 import sys
+from typing import Iterator, Optional, TextIO
 
 import docutils
 
@@ -6,12 +7,12 @@ from . import rstfmt
 
 
 class DumpVisitor(docutils.nodes.GenericNodeVisitor):
-    def __init__(self, document, file=None):
+    def __init__(self, document: docutils.nodes.document, file: Optional[TextIO] = None) -> None:
         super().__init__(document)
         self.depth = 0
         self.file = file or sys.stdout
 
-    def default_visit(self, node):
+    def default_visit(self, node: docutils.nodes.Node) -> None:
         t = type(node).__name__
         print("    " * self.depth + f"- \x1b[34m{t}\x1b[m", end=" ", file=self.file)
         if isinstance(node, docutils.nodes.Text):
@@ -22,31 +23,31 @@ class DumpVisitor(docutils.nodes.GenericNodeVisitor):
 
         self.depth += 1
 
-    def default_departure(self, node):
+    def default_departure(self, node: docutils.nodes.Node) -> None:
         self.depth -= 1
 
 
-def dump_node(node, file):
+def dump_node(node: docutils.nodes.Node, file: TextIO) -> None:
     node.walkabout(DumpVisitor(node, file))
 
 
-def iter_descendants(node):
+def iter_descendants(node: docutils.nodes.Node) -> Iterator[docutils.nodes.Node]:
     for c in node.children:
         yield c
         yield from iter_descendants(c)
 
 
-def text_contents(node):
+def text_contents(node: docutils.nodes.Node) -> str:
     return "".join(n.astext() for n in iter_descendants(node) if isinstance(n, docutils.nodes.Text))
 
 
-def node_eq(d1, d2):
+def node_eq(d1: docutils.nodes.Node, d2: docutils.nodes.Node) -> bool:
     if type(d1) is not type(d2):
         print("different type")
         return False
 
     if isinstance(d1, docutils.nodes.Text):
-        return d1.astext().split() == d2.astext().split()
+        return bool(d1.astext().split() == d2.astext().split())
     else:
         sentinel = object()
         for k in ["name", "refname", "refuri"]:
@@ -62,7 +63,7 @@ def node_eq(d1, d2):
 
             t1 = black.format_str(text_contents(d1), mode=black.FileMode())
             t2 = black.format_str(text_contents(d2), mode=black.FileMode())
-            return t1 == t2
+            return bool(t1 == t2)
 
     if len(d1.children) != len(d2.children):
         print("different num children")
@@ -74,7 +75,7 @@ def node_eq(d1, d2):
     return all(node_eq(c1, c2) for c1, c2 in zip(d1.children, d2.children))
 
 
-def run_test(doc):
+def run_test(doc: docutils.nodes.document) -> None:
     if isinstance(doc, str):
         doc = rstfmt.parse_string(doc)
 

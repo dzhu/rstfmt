@@ -4,12 +4,28 @@ import string
 import subprocess
 import warnings
 from collections import namedtuple
+from typing import (
+    Any,
+    Callable,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+    overload,
+)
 
 import black
 import docutils
 import docutils.parsers.rst
 
 from . import rst_extras
+
+
+T = TypeVar("T")
+
 
 # Constants.
 
@@ -27,7 +43,7 @@ post_markup_break_chars = space_chars | set("-.,:;!?\\/'\")]}>")
 # Iterator stuff.
 
 
-def intersperse(val, it):
+def intersperse(val: T, it: Iterable[T]) -> Iterator[T]:
     first = True
     for x in it:
         if not first:
@@ -39,11 +55,11 @@ def intersperse(val, it):
 chain = itertools.chain.from_iterable
 
 
-def enum_first(it):
+def enum_first(it: Iterable[T]) -> Iterator[Tuple[bool, T]]:
     return zip(itertools.chain([True], itertools.repeat(False)), it)
 
 
-def prepend_if_any(f, it):
+def prepend_if_any(f: T, it: Iterator[T]) -> Iterator[T]:
     try:
         x = next(it)
     except StopIteration:
@@ -53,7 +69,7 @@ def prepend_if_any(f, it):
     yield from it
 
 
-def chain_intersperse(val, it):
+def chain_intersperse(val: T, it: Iterable[Iterable[T]]) -> Iterator[T]:
     first = True
     for x in it:
         if not first:
@@ -62,7 +78,7 @@ def chain_intersperse(val, it):
         yield from x
 
 
-def pairwise(iterable):
+def pairwise(iterable: Iterable[T]) -> Iterator[Tuple[T, T]]:
     a, b = itertools.tee(iterable)
     next(b, None)
     return zip(a, b)
@@ -76,33 +92,38 @@ class FormatContext(
         "FormatContextBase", ["section_depth", "width", "bullet", "colwidths", "line_block_depth"]
     )
 ):
-    def indent(self, n):
+    def indent(self, n: int) -> "FormatContext":
         if self.width is None:
             return self
         return self._replace(width=max(1, self.width - n))
 
-    def in_section(self):
+    def in_section(self) -> "FormatContext":
         return self._replace(section_depth=self.section_depth + 1)
 
-    def in_line_block(self):
+    def in_line_block(self) -> "FormatContext":
         return self._replace(line_block_depth=self.line_block_depth + 1)
 
-    def with_width(self, w):
+    def with_width(self, w: int) -> "FormatContext":
         return self._replace(width=w)
 
-    def with_bullet(self, bullet):
+    def with_bullet(self, bullet: str) -> "FormatContext":
         return self._replace(bullet=bullet)
 
-    def with_colwidths(self, c):
+    def with_colwidths(self, c: List[int]) -> "FormatContext":
         return self._replace(colwidths=c)
 
 
 class inline_markup:
-    def __init__(self, text):
+    def __init__(self, text: str) -> None:
         self.text = text
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "inline_markup({})".format(repr(self.text))
+
+
+inline_item = Union[str, inline_markup]
+inline_iterator = Iterator[inline_item]
+line_iterator = Iterator[str]
 
 
 word_info = namedtuple(
@@ -110,7 +131,7 @@ word_info = namedtuple(
 )
 
 
-def split_words(item):
+def split_words(item: inline_item) -> List[word_info]:
     if isinstance(item, str):
         if not item:
             # An empty string is treated as having trailing punctuation: it only
@@ -137,7 +158,7 @@ def split_words(item):
     return new_words
 
 
-def wrap_text(width, items):
+def wrap_text(width: Optional[int], items: Iterable[inline_item]) -> Iterator[str]:
     if width is not None and width <= 0:
         raise ValueError(f"Invalid width {width}")
 
@@ -163,15 +184,15 @@ def wrap_text(width, items):
         else:
             words.append(word)
 
-    words = (word.text for word in words if word.text)
+    word_strs = (word.text for word in words if word.text)
 
     if width is None:
-        yield " ".join(words)
+        yield " ".join(word_strs)
         return
 
-    buf = []
+    buf: List[str] = []
     n = 0
-    for w in words:
+    for w in word_strs:
         n2 = n + bool(buf) + len(w)
         if buf and n2 > width:
             yield " ".join(buf)
@@ -183,17 +204,17 @@ def wrap_text(width, items):
         yield " ".join(buf)
 
 
-def fmt_children(node, ctx):
+def fmt_children(node: docutils.nodes.Node, ctx: FormatContext) -> Iterator[Iterator[str]]:
     return (fmt(c, ctx) for c in node.children)
 
 
-def with_spaces(n, lines):
+def with_spaces(n: int, lines: Iterable[str]) -> Iterator[str]:
     s = " " * n
     for l in lines:
         yield s + l if l else l
 
 
-def preproc(node):
+def preproc(node: docutils.nodes.Node) -> None:
     """
     Do some node preprocessing that is generic across node types and is therefore most convenient to
     do as a simple recursive function rather than as part of the big dispatcher class.
@@ -205,7 +226,7 @@ def preproc(node):
     # Match references to targets, which helps later with distinguishing whether they're anonymous.
     for a, b in pairwise(node.children):
         if isinstance(a, docutils.nodes.reference) and isinstance(b, docutils.nodes.target):
-            a.attributes["target"] = b
+            a.attributes["target"] = b  # type: ignore
 
     # Sort contiguous blocks of targets by name.
     start = None
@@ -243,8 +264,10 @@ class IgnoreMessagesReporter(docutils.utils.Reporter):
         "Title underline too short.",
     }
 
-    def system_message(self, level, message, *children, **kwargs):
-        orig_level = self.halt_level
+    def system_message(
+        self, level: int, message: str, *children: Any, **kwargs: Any
+    ) -> docutils.nodes.system_message:
+        orig_level = self.halt_level  # type: ignore
         if message in self.ignored_messages:
             self.halt_level = docutils.utils.Reporter.SEVERE_LEVEL + 1
         msg = super().system_message(level, message, *children, **kwargs)
@@ -257,7 +280,7 @@ class IgnoreMessagesReporter(docutils.utils.Reporter):
 
 class CodeFormatters:
     @staticmethod
-    def python(code):
+    def python(code: str) -> str:
         try:
             code = black.format_str(code, mode=black.FileMode()).rstrip()
         except Exception as e:
@@ -265,10 +288,10 @@ class CodeFormatters:
         return code
 
     @staticmethod
-    def go(code):
+    def go(code: str) -> str:
         try:
             code = subprocess.run(
-                ["gofmt"], input=code, capture_output=True, encoding="utf-8", check=True
+                ["gofmt"], input=code, stdout=subprocess.PIPE, encoding="utf-8", check=True
             ).stdout
         except OSError as e:
             warnings.warn(str(e))
@@ -284,28 +307,34 @@ class CodeFormatters:
 class Formatters:
     # Basic formatting.
     @staticmethod
-    def substitution_reference(node, ctx: FormatContext):
-        yield inline_markup("|" + "".join(chain(fmt_children(node, ctx))) + "|")
+    def substitution_reference(
+        node: docutils.nodes.substitution_reference, ctx: FormatContext
+    ) -> inline_iterator:
+        c = chain(fmt_children(node, ctx))
+        x = inline_markup("|" + "".join(c) + "|")
+        yield x
 
     @staticmethod
-    def emphasis(node, ctx: FormatContext):
+    def emphasis(node: docutils.nodes.emphasis, ctx: FormatContext) -> inline_iterator:
         yield inline_markup("*" + "".join(chain(fmt_children(node, ctx))) + "*")
 
     @staticmethod
-    def strong(node, ctx: FormatContext):
+    def strong(node: docutils.nodes.strong, ctx: FormatContext) -> inline_iterator:
         yield inline_markup("**" + "".join(chain(fmt_children(node, ctx))) + "**")
 
     @staticmethod
-    def literal(node, ctx: FormatContext):
+    def literal(node: docutils.nodes.literal, ctx: FormatContext) -> inline_iterator:
         yield inline_markup("``" + "".join(chain(fmt_children(node, ctx))) + "``")
 
     @staticmethod
-    def title_reference(node, ctx: FormatContext):
+    def title_reference(
+        node: docutils.nodes.title_reference, ctx: FormatContext
+    ) -> inline_iterator:
         yield inline_markup("`" + "".join(chain(fmt_children(node, ctx))) + "`")
 
     # Basic lists.
     @staticmethod
-    def _list(node, ctx: FormatContext):
+    def _list(node: docutils.nodes.Node, ctx: FormatContext) -> line_iterator:
         subs = [list(fmt(c, ctx)) for c in node.children]
         if any(len(s) > 2 for s in subs):
             yield from chain_intersperse("", subs)
@@ -313,15 +342,15 @@ class Formatters:
             yield from chain(subs)
 
     @staticmethod
-    def bullet_list(node, ctx: FormatContext):
+    def bullet_list(node: docutils.nodes.bullet_list, ctx: FormatContext) -> line_iterator:
         yield from Formatters._list(node, ctx.with_bullet("- "))
 
     @staticmethod
-    def enumerated_list(node, ctx: FormatContext):
+    def enumerated_list(node: docutils.nodes.enumerated_list, ctx: FormatContext) -> line_iterator:
         yield from Formatters._list(node, ctx.with_bullet("#."))
 
     @staticmethod
-    def list_item(node, ctx: FormatContext):
+    def list_item(node: docutils.nodes.list_item, ctx: FormatContext) -> line_iterator:
         w = len(ctx.bullet) + 1
         b = ctx.bullet + " "
         s = " " * w
@@ -331,15 +360,17 @@ class Formatters:
 
     # Definition lists.
     @staticmethod
-    def term(node, ctx: FormatContext):
+    def term(node: docutils.nodes.term, ctx: FormatContext) -> line_iterator:
         yield " ".join(wrap_text(None, chain(fmt_children(node, ctx))))
 
     @staticmethod
-    def definition(node, ctx: FormatContext):
+    def definition(node: docutils.nodes.definition, ctx: FormatContext) -> line_iterator:
         yield from chain_intersperse("", fmt_children(node, ctx))
 
     @staticmethod
-    def definition_list_item(node, ctx: FormatContext):
+    def definition_list_item(
+        node: docutils.nodes.definition_list_item, ctx: FormatContext
+    ) -> line_iterator:
         for c in node.children:
             if isinstance(c, docutils.nodes.term):
                 yield from fmt(c, ctx)
@@ -347,38 +378,38 @@ class Formatters:
                 yield from with_spaces(3, fmt(c, ctx.indent(3)))
 
     @staticmethod
-    def definition_list(node, ctx: FormatContext):
+    def definition_list(node: docutils.nodes.definition_list, ctx: FormatContext) -> line_iterator:
         yield from chain_intersperse("", fmt_children(node, ctx))
 
     # Field lists.
     @staticmethod
-    def field_name(node, ctx: FormatContext):
+    def field_name(node: docutils.nodes.field_name, ctx: FormatContext) -> line_iterator:
         text = " ".join(wrap_text(None, chain(fmt_children(node, ctx))))
         yield f":{text}:"
 
     @staticmethod
-    def field_body(node, ctx: FormatContext):
+    def field_body(node: docutils.nodes.field_body, ctx: FormatContext) -> line_iterator:
         yield from with_spaces(3, chain(fmt_children(node, ctx.indent(3))))
 
     @staticmethod
-    def field(node, ctx: FormatContext):
+    def field(node: docutils.nodes.field, ctx: FormatContext) -> line_iterator:
         yield from chain(fmt_children(node, ctx))
 
     @staticmethod
-    def field_list(node, ctx: FormatContext):
+    def field_list(node: docutils.nodes.field_list, ctx: FormatContext) -> line_iterator:
         yield from chain_intersperse("", fmt_children(node, ctx))
 
     # Structure.
     @staticmethod
-    def transition(node, ctx: FormatContext):
+    def transition(node: docutils.nodes.transition, ctx: FormatContext) -> line_iterator:
         yield "----"
 
     @staticmethod
-    def paragraph(node, ctx: FormatContext):
+    def paragraph(node: docutils.nodes.paragraph, ctx: FormatContext) -> line_iterator:
         yield from wrap_text(ctx.width, chain(fmt_children(node, ctx)))
 
     @staticmethod
-    def title(node, ctx: FormatContext):
+    def title(node: docutils.nodes.title, ctx: FormatContext) -> line_iterator:
         text = " ".join(wrap_text(None, chain(fmt_children(node, ctx))))
         char = section_chars[ctx.section_depth - 1]
         if ctx.section_depth <= max_overline_depth:
@@ -391,13 +422,13 @@ class Formatters:
             yield char * len(text)
 
     @staticmethod
-    def block_quote(node, ctx: FormatContext):
+    def block_quote(node: docutils.nodes.block_quote, ctx: FormatContext) -> line_iterator:
         yield from with_spaces(
             3, chain_intersperse("", fmt_children(node, ctx.indent(3))),
         )
 
     @staticmethod
-    def directive(node, ctx: FormatContext):
+    def directive(node: docutils.nodes.Node, ctx: FormatContext) -> line_iterator:
         d = node.attributes["directive"]
 
         yield " ".join([f".. {d.name}::", *d.arguments])
@@ -413,16 +444,16 @@ class Formatters:
             yield from with_spaces(3, fmt(sub_doc, ctx.indent(3)))
 
     @staticmethod
-    def section(node, ctx: FormatContext):
+    def section(node: docutils.nodes.section, ctx: FormatContext) -> line_iterator:
         yield from chain_intersperse("", fmt_children(node, ctx.in_section()))
 
     @staticmethod
-    def document(node, ctx: FormatContext):
+    def document(node: docutils.nodes.document, ctx: FormatContext) -> line_iterator:
         yield from chain_intersperse("", fmt_children(node, ctx))
 
     # Tables.
     @staticmethod
-    def row(node, ctx: FormatContext):
+    def row(node: docutils.nodes.row, ctx: FormatContext) -> line_iterator:
         all_lines = [
             chain_intersperse("", fmt_children(entry, ctx.with_width(w - 2)))
             for entry, w in zip(node.children, ctx.colwidths)
@@ -433,14 +464,14 @@ class Formatters:
             ) + "|"
 
     @staticmethod
-    def tbody(node, ctx: FormatContext):
+    def tbody(node: docutils.nodes.tbody, ctx: FormatContext) -> line_iterator:
         sep = "+" + "+".join("-" * w for w in ctx.colwidths) + "+"
         yield from chain_intersperse(sep, fmt_children(node, ctx))
 
     thead = tbody
 
     @staticmethod
-    def tgroup(node, ctx: FormatContext):
+    def tgroup(node: docutils.nodes.tgroup, ctx: FormatContext) -> line_iterator:
         ctx = ctx.with_colwidths(
             [
                 c.attributes["colwidth"]
@@ -462,12 +493,12 @@ class Formatters:
                 yield sep
 
     @staticmethod
-    def table(node, ctx: FormatContext):
+    def table(node: docutils.nodes.table, ctx: FormatContext) -> line_iterator:
         yield from chain_intersperse("", fmt_children(node, ctx))
 
     # Admonitions.
     @staticmethod
-    def admonition(node, ctx: FormatContext):
+    def admonition(node: docutils.nodes.admonition, ctx: FormatContext) -> line_iterator:
         title = node.children[0]
         assert isinstance(title, docutils.nodes.title)
         yield ".. admonition:: " + "".join(wrap_text(None, chain(fmt_children(title, ctx))))
@@ -476,7 +507,7 @@ class Formatters:
         yield from with_spaces(3, chain_intersperse("", (fmt(c, ctx) for c in node.children[1:])))
 
     @staticmethod
-    def _sub_admonition(node, ctx: FormatContext):
+    def _sub_admonition(node: docutils.nodes.Node, ctx: FormatContext) -> line_iterator:
         yield f".. {node.tagname}::"
         yield ""
         yield from with_spaces(3, chain_intersperse("", fmt_children(node, ctx.indent(3))))
@@ -493,7 +524,7 @@ class Formatters:
 
     # Misc.
     @staticmethod
-    def line(node, ctx: FormatContext):
+    def line(node: docutils.nodes.line, ctx: FormatContext) -> line_iterator:
         if not node.children:
             yield "|"
             return
@@ -506,34 +537,34 @@ class Formatters:
             yield (prefix1 if first else prefix2) + line
 
     @staticmethod
-    def line_block(node, ctx: FormatContext):
+    def line_block(node: docutils.nodes.line_block, ctx: FormatContext) -> line_iterator:
         yield from chain(fmt_children(node, ctx.in_line_block()))
 
     @staticmethod
-    def Text(node, _: FormatContext):
+    def Text(node: docutils.nodes.Text, _: FormatContext) -> inline_iterator:
         yield node.astext()
 
     @staticmethod
-    def reference(node, ctx: FormatContext):
+    def reference(node: docutils.nodes.reference, ctx: FormatContext) -> inline_iterator:
         title = " ".join(wrap_text(None, chain(fmt_children(node, ctx))))
-        anon_suffix = lambda anonymous: "__" if anonymous else "_"
+        anon_suffix: Callable[[bool], str] = lambda anonymous: "__" if anonymous else "_"
+        attrs = node.attributes  # type: ignore
+        children = node.children  # type: ignore
 
         # Handle references that are also substitution references.
-        if len(node.children) == 1 and isinstance(
-            node.children[0], docutils.nodes.substitution_reference
-        ):
-            anonymous = bool(node.attributes.get("anonymous"))
+        if len(children) == 1 and isinstance(children[0], docutils.nodes.substitution_reference):
+            anonymous = bool(attrs.get("anonymous"))
             yield inline_markup(title + anon_suffix(anonymous))
             return
 
         # Handle references to external URIs. They can be either standalone hyperlinks, written as
         # just the URI, or an explicit "`text <url>`_" or "`text <url>`__".
-        if "refuri" in node.attributes:
-            uri = node.attributes["refuri"]
+        if "refuri" in attrs:
+            uri = attrs["refuri"]
             if uri == title or uri == "mailto:" + title:
                 yield inline_markup(title)
             else:
-                anonymous = "target" not in node.attributes
+                anonymous = "target" not in attrs
                 yield inline_markup(f"`{title} <{uri}>`{anon_suffix(anonymous)}")
             return
 
@@ -546,14 +577,14 @@ class Formatters:
 
         # "x__" is one of the few cases to trigger an explicit "anonymous" attribute (the other
         # being the similar "|x|__", which is already handled above).
-        if "anonymous" in node.attributes:
+        if "anonymous" in attrs:
             if not is_single_word:
                 title = "`" + title + "`"
             yield inline_markup(title + anon_suffix(True))
             return
 
-        anonymous = "target" not in node.attributes
-        ref = node.attributes["refname"]
+        anonymous = "target" not in attrs
+        ref = attrs["refname"]
         # Check whether the reference name matches the text and can be made implicit. (Reference
         # names are case-insensitive.)
         if anonymous and ref.lower() == title.lower():
@@ -565,15 +596,15 @@ class Formatters:
             yield inline_markup(f"`{title} <{ref}_>`{anon_suffix(anonymous)}")
 
     @staticmethod
-    def role(node, ctx: FormatContext):
+    def role(node: docutils.nodes.Node, ctx: FormatContext) -> inline_iterator:
         yield inline_markup(node.rawsource)
 
     @staticmethod
-    def inline(node, ctx: FormatContext):
+    def inline(node: docutils.nodes.inline, ctx: FormatContext) -> inline_iterator:
         yield from chain(fmt_children(node, ctx))
 
     @staticmethod
-    def target(node, ctx: FormatContext):
+    def target(node: docutils.nodes.target, ctx: FormatContext) -> line_iterator:
         if not isinstance(node.parent, (docutils.nodes.document, docutils.nodes.section)):
             return
         try:
@@ -585,18 +616,18 @@ class Formatters:
         yield f".. _{name}:{body}"
 
     @staticmethod
-    def comment(node, ctx: FormatContext):
+    def comment(node: docutils.nodes.comment, ctx: FormatContext) -> line_iterator:
         yield ".."
         if node.children:
             text = "\n".join(chain(fmt_children(node, ctx)))
             yield from with_spaces(3, text.split("\n"))
 
     @staticmethod
-    def image(node, ctx: FormatContext):
+    def image(node: docutils.nodes.image, ctx: FormatContext) -> line_iterator:
         yield f".. image:: {node.attributes['uri']}"
 
     @staticmethod
-    def literal_block(node, ctx: FormatContext):
+    def literal_block(node: docutils.nodes.literal_block, ctx: FormatContext) -> line_iterator:
         langs = [c for c in node.attributes["classes"] if c != "code"]
         lang = langs[0] if langs else None
         yield ".. code::" + (" " + lang if lang else "")
@@ -613,21 +644,21 @@ class Formatters:
         yield from with_spaces(3, text.split("\n"))
 
 
-def fmt(node, ctx: FormatContext):
+def fmt(node: docutils.nodes.Node, ctx: FormatContext) -> Iterator[str]:
     try:
         func = getattr(Formatters, type(node).__name__)
     except AttributeError:
         raise ValueError(f"Unknown node type {type(node).__name__}!")
-    return func(node, ctx)
+    return func(node, ctx)  # type: ignore
 
 
-def format_node(width, node):
+def format_node(width: Optional[int], node: docutils.nodes.Node) -> str:
     if width is not None and width <= 0:
         width = None
     return "\n".join(fmt(node, FormatContext(0, width, None, None, 0))) + "\n"
 
 
-def parse_string(s):
+def parse_string(s: str) -> docutils.nodes.document:
     parser = docutils.parsers.rst.Parser()
     settings = docutils.frontend.OptionParser(
         components=[docutils.parsers.rst.Parser]

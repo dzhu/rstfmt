@@ -18,7 +18,7 @@ class ParseError(Exception):
     pass
 
 
-def do_format(width, s):
+def do_format(width: int, s: str) -> str:
     # Unpickling SystemMessage objects is broken for some reason, so raising them directly fails;
     # replace them with our own sentinel class.
     try:
@@ -27,7 +27,7 @@ def do_format(width, s):
         raise ParseError(str(e))
 
 
-async def handle(pool, req):
+async def handle(pool: futures.Executor, req: web.Request) -> web.Response:
     width = int(req.headers.get("X-Line-Length", 72))
     body = await req.text()
 
@@ -50,7 +50,7 @@ async def handle(pool, req):
     return resp
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--bind-host", default="localhost")
     parser.add_argument("--bind-port", type=int, default=5219)

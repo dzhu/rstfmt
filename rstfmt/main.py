@@ -2,23 +2,24 @@ import argparse
 import contextlib
 import sys
 import warnings
+from typing import Any, ContextManager, TextIO, cast
 
 from . import debug, rst_extras, rstfmt
 
 
 # Define this here to support Python <3.7.
-class nullcontext(contextlib.AbstractContextManager):
-    def __init__(self, enter_result=None):
+class nullcontext(contextlib.AbstractContextManager):  # type: ignore
+    def __init__(self, enter_result: Any = None):
         self.enter_result = enter_result
 
-    def __enter__(self):
+    def __enter__(self) -> Any:
         return self.enter_result
 
-    def __exit__(self, *excinfo):
+    def __exit__(self, *excinfo: Any) -> Any:
         pass
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--in-place", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
@@ -32,7 +33,8 @@ def main():
     STDIN = "-"
 
     for fn in args.files or [STDIN]:
-        cm = nullcontext(sys.stdin) if fn == STDIN else open(fn)
+        cm = cast(ContextManager[TextIO], nullcontext(sys.stdin) if fn == STDIN else open(fn))
+
         with cm as f:
             doc = rstfmt.parse_string(f.read())
 

@@ -1,3 +1,5 @@
+from typing import Any, Dict, Iterator, Optional, Type, TypeVar
+
 import docutils
 import sphinx.directives
 import sphinx.ext.autodoc.directive
@@ -5,13 +7,17 @@ from docutils.parsers.rst import directives, roles
 from docutils.parsers.rst.directives import parts
 from sphinx.ext import autodoc
 
+
+T = TypeVar("T")
+
+
 # Handle directives and roles by inserting them into the tree unparsed.
 
 
 _new_nodes = []
 
 
-def _new_node(cls):
+def _new_node(cls: Type[docutils.nodes.Element]) -> Type[docutils.nodes.Element]:
     _new_nodes.append(cls)
     return cls
 
@@ -23,18 +29,23 @@ class directive(docutils.nodes.Element):
 
 @_new_node
 class role(docutils.nodes.Element):
-    def __init__(self, rawtext, escaped_text, **options):
+    def __init__(self, rawtext: str, escaped_text: str, **options: Any) -> None:
         super().__init__(rawtext, escaped_text=escaped_text, options=options)
 
 
 _new_directives = []
 
 
-def _add_directive(name, cls, option_spec=None, raw=True):
+def _add_directive(
+    name: str,
+    cls: Type[docutils.parsers.rst.Directive],
+    option_spec: Optional[Dict[str, Any]] = None,
+    raw: bool = True,
+) -> None:
     _new_directives.append((name, cls, option_spec, raw))
 
 
-def _subclasses(cls):
+def _subclasses(cls: Type[T]) -> Iterator[Type[T]]:
     for c in cls.__subclasses__():
         yield c
         yield from _subclasses(c)
@@ -67,7 +78,7 @@ except ImportError:
     pass
 
 
-def register():
+def register() -> None:
     docutils.nodes._add_node_class_names([cls.__name__ for cls in _new_nodes])
 
     for r in ["class", "download", "func", "ref", "superscript"]:
