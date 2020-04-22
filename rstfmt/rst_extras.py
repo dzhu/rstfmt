@@ -33,8 +33,23 @@ class directive(docutils.nodes.Element):
 
 @_new_node
 class role(docutils.nodes.Element):
-    def __init__(self, rawtext: str, escaped_text: str, **options: Any) -> None:
-        super().__init__(rawtext, escaped_text=escaped_text, options=options)
+    pass
+
+
+role_aliases = {
+    "pep": "PEP",
+    "pep-reference": "PEP",
+    "rfc": "RFC",
+    "rfc-reference": "RFC",
+    "subscript": "sub",
+    "superscript": "sup",
+}
+
+
+def generic_role(r: str, rawtext: str, text: str, *_: Any, **__: Any) -> Any:
+    r = role_aliases.get(r.lower(), r)
+    text = docutils.utils.unescape(text, restore_backslashes=True)
+    return ([role(rawtext, text=text, role=r)], [])
 
 
 def _add_directive(
@@ -63,8 +78,21 @@ def _subclasses(cls: Type[T]) -> Iterator[Type[T]]:
 
 
 def register() -> None:
-    for r in ["class", "download", "func", "ref", "superscript"]:
-        roles.register_generic_role(r, role)
+    for r in [
+        # Standard roles (https://docutils.sourceforge.io/docs/ref/rst/roles.html) that don't have
+        # equivalent non-role-based markup.
+        "math",
+        "pep-reference",
+        "rfc-reference",
+        "subscript",
+        "superscript",
+        # Extensions.
+        "class",
+        "func",
+        "download",
+        "ref",
+    ]:
+        roles.register_canonical_role(r, generic_role)
 
     # Do the magic necessary to allow Docutils visitors to work with our new node subclasses.
     docutils.nodes._add_node_class_names([cls.__name__ for cls in _new_nodes])

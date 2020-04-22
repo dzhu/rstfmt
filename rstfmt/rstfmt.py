@@ -603,7 +603,7 @@ class Formatters:
 
     @staticmethod
     def role(node: docutils.nodes.Node, ctx: FormatContext) -> inline_iterator:
-        yield inline_markup(node.rawsource)
+        yield inline_markup(f":{node.attributes['role']}:`{node.attributes['text']}`")
 
     @staticmethod
     def inline(node: docutils.nodes.inline, ctx: FormatContext) -> inline_iterator:
