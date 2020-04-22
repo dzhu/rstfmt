@@ -574,7 +574,7 @@ class Formatters:
         # Simple reference names can consist of "alphanumerics plus isolated (no two adjacent)
         # internal hyphens, underscores, periods, colons and plus signs", according to
         # https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#reference-names.
-        is_single_word = re.match("^[-_.:+a-zA-Z]+$", title) and not re.search(
+        is_single_word = re.match("^[-_.:+a-zA-Z0-9]+$", title) and not re.search(
             "[-_.:+][-_.:+]", title
         )
 
