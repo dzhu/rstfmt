@@ -1,3 +1,10 @@
+"""
+This module handles adding constructs to the reST parser in a way that makes sense for rstfmt.
+Nonstandard directives and roles are inserted into the tree unparsed (wrapped in custom node classes
+defined here) so we can format them the way they came in without without caring about what they
+would normally expand to.
+"""
+
 from typing import Any, Dict, Iterator, Optional, Type, TypeVar
 
 import docutils
@@ -9,9 +16,6 @@ from sphinx.ext import autodoc
 
 
 T = TypeVar("T")
-
-
-# Handle directives and roles by inserting them into the tree unparsed.
 
 
 _new_nodes = []
@@ -33,16 +37,23 @@ class role(docutils.nodes.Element):
         super().__init__(rawtext, escaped_text=escaped_text, options=options)
 
 
-_new_directives = []
-
-
 def _add_directive(
-    name: str,
-    cls: Type[docutils.parsers.rst.Directive],
-    option_spec: Optional[Dict[str, Any]] = None,
-    raw: bool = True,
+    name: str, cls: Type[docutils.parsers.rst.Directive], *, raw: bool = True,
 ) -> None:
-    _new_directives.append((name, cls, option_spec, raw))
+    # We create a new class inheriting from the given directive class to automatically pick up the
+    # argument counts and most of the other attributes that define how the directive is parsed, so
+    # parsing can happen as normal. The things we change are:
+    #
+    # - Relax the option spec so an incorrect name doesn't stop formatting and every option comes
+    #   through unchanged.
+    # - Override the run method to just stick the directive into the tree.
+    # - Add a `raw` attribute to inform formatting later on.
+    namespace = {
+        "option_spec": autodoc.directive.DummyOptionSpec(),
+        "run": lambda self: [directive(directive=self)],
+        "raw": raw,
+    }
+    directives.register_directive(name, type("rstfmt_" + cls.__name__, (cls,), namespace))
 
 
 def _subclasses(cls: Type[T]) -> Iterator[Type[T]]:
@@ -51,44 +62,29 @@ def _subclasses(cls: Type[T]) -> Iterator[Type[T]]:
         yield from _subclasses(c)
 
 
-# Add support for common directives.
-
-
-# `list-table` directives are parsed into table nodes by default and could be formatted as such, but
-# that's vulnerable to producing malformed tables when the given column widths are too small.
-_add_directive("list-table", directives.tables.ListTable, raw=False)
-
-_add_directive("contents", directives.parts.Contents)
-_add_directive("include", directives.misc.Include)
-_add_directive("toctree", sphinx.directives.other.TocTree)
-
-
-for d in set(_subclasses(autodoc.Documenter)):
-    if d.objtype != "object":
-        _add_directive(
-            "auto" + d.objtype, autodoc.directive.AutodocDirective, option_spec=d.option_spec
-        )
-
-
-try:
-    import sphinxarg.ext
-
-    _add_directive("argparse", sphinxarg.ext.ArgParseDirective)
-except ImportError:
-    pass
-
-
 def register() -> None:
+    for r in ["class", "download", "func", "ref", "superscript"]:
+        roles.register_generic_role(r, role)
+
+    # Do the magic necessary to allow Docutils visitors to work with our new node subclasses.
     docutils.nodes._add_node_class_names([cls.__name__ for cls in _new_nodes])
 
-    for r in ["class", "download", "func", "ref", "superscript"]:
-        roles.register_canonical_role(r, roles.GenericRole(r, role))
+    # `list-table` directives are parsed into table nodes by default and could be formatted as such,
+    # but that's vulnerable to producing malformed tables when the given column widths are too
+    # small.
+    _add_directive("list-table", directives.tables.ListTable, raw=False)
 
-    identity = lambda x: x
-    run = lambda self: [directive(directive=self)]
+    _add_directive("contents", directives.parts.Contents)
+    _add_directive("include", directives.misc.Include)
+    _add_directive("toctree", sphinx.directives.other.TocTree)
 
-    for name, cls, option_spec, raw in _new_directives:
-        if option_spec is None:
-            option_spec = cls.option_spec
-        namespace = {"option_spec": {k: identity for k in option_spec}, "run": run, "raw": raw}
-        directives.register_directive(name, type("rstfmt_" + cls.__name__, (cls,), namespace))
+    for d in set(_subclasses(autodoc.Documenter)):
+        if d.objtype != "object":
+            _add_directive("auto" + d.objtype, autodoc.directive.AutodocDirective)
+
+    try:
+        import sphinxarg.ext
+    except ImportError:
+        pass
+    else:
+        _add_directive("argparse", sphinxarg.ext.ArgParseDirective)
