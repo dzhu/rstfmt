@@ -354,6 +354,9 @@ class Formatters:
 
     @staticmethod
     def list_item(node: docutils.nodes.list_item, ctx: FormatContext) -> line_iterator:
+        if not node.children:
+            yield "-"
+            return
         w = len(ctx.bullet) + 1
         b = ctx.bullet + " "
         s = " " * w
