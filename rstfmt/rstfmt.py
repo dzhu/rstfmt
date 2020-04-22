@@ -10,6 +10,7 @@ from typing import (
     Iterable,
     Iterator,
     List,
+    NamedTuple,
     Optional,
     Tuple,
     TypeVar,
@@ -87,11 +88,13 @@ def pairwise(iterable: Iterable[T]) -> Iterator[Tuple[T, T]]:
 # Helper classes and functions.
 
 
-class FormatContext(
-    namedtuple(
-        "FormatContextBase", ["section_depth", "width", "bullet", "colwidths", "line_block_depth"]
-    )
-):
+class FormatContext(NamedTuple):
+    section_depth: int
+    width: Optional[int]
+    bullet: str
+    colwidths: List[int]
+    line_block_depth: int
+
     def indent(self, n: int) -> "FormatContext":
         if self.width is None:
             return self
@@ -655,7 +658,7 @@ def fmt(node: docutils.nodes.Node, ctx: FormatContext) -> Iterator[str]:
 def format_node(width: Optional[int], node: docutils.nodes.Node) -> str:
     if width is not None and width <= 0:
         width = None
-    return "\n".join(fmt(node, FormatContext(0, width, None, None, 0))) + "\n"
+    return "\n".join(fmt(node, FormatContext(0, width, "", [], 0))) + "\n"
 
 
 def parse_string(s: str) -> docutils.nodes.document:
