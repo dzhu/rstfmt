@@ -108,7 +108,7 @@ def register() -> None:
 
     for d in set(_subclasses(autodoc.Documenter)):
         if d.objtype != "object":
-            _add_directive("auto" + d.objtype, autodoc.directive.AutodocDirective)
+            _add_directive("auto" + d.objtype, autodoc.directive.AutodocDirective, raw=False)
 
     try:
         import sphinxarg.ext
