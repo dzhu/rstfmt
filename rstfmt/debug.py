@@ -61,8 +61,16 @@ def node_eq(d1: docutils.nodes.Node, d2: docutils.nodes.Node) -> bool:
         if "python" in d1["classes"]:
             import black
 
-            t1 = black.format_str(text_contents(d1), mode=black.FileMode())
-            t2 = black.format_str(text_contents(d2), mode=black.FileMode())
+            # Check that either the outputs are equal or both calls to Black fail to parse.
+            t1 = t2 = object()
+            try:
+                t1 = black.format_str(text_contents(d1), mode=black.FileMode())
+            except black.InvalidInput:
+                pass
+            try:
+                t2 = black.format_str(text_contents(d2), mode=black.FileMode())
+            except black.InvalidInput:
+                pass
             return bool(t1 == t2)
 
     if len(d1.children) != len(d2.children):
