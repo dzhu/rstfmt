@@ -448,8 +448,9 @@ class Formatters:
             yield from prepend_if_any("", with_spaces(3, d.content))
         else:
             sub_doc = parse_string("\n".join(d.content))
-            yield ""
-            yield from with_spaces(3, fmt(sub_doc, ctx.indent(3)))
+            if sub_doc.children:
+                yield ""
+                yield from with_spaces(3, fmt(sub_doc, ctx.indent(3)))
 
     @staticmethod
     def section(node: docutils.nodes.section, ctx: FormatContext) -> line_iterator:
