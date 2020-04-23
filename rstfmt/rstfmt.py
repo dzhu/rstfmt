@@ -319,11 +319,13 @@ class Formatters:
 
     @staticmethod
     def emphasis(node: docutils.nodes.emphasis, ctx: FormatContext) -> inline_iterator:
-        yield inline_markup("*" + "".join(chain(fmt_children(node, ctx))) + "*")
+        yield inline_markup("*" + "".join(chain(fmt_children(node, ctx))).replace("*", "\\*") + "*")
 
     @staticmethod
     def strong(node: docutils.nodes.strong, ctx: FormatContext) -> inline_iterator:
-        yield inline_markup("**" + "".join(chain(fmt_children(node, ctx))) + "**")
+        yield inline_markup(
+            "**" + "".join(chain(fmt_children(node, ctx))).replace("*", "\\*") + "**"
+        )
 
     @staticmethod
     def literal(node: docutils.nodes.literal, ctx: FormatContext) -> inline_iterator:
