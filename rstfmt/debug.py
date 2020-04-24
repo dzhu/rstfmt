@@ -1,34 +1,27 @@
 import sys
-from typing import Iterator, Optional, TextIO
+from typing import Iterator, Optional, TextIO, Tuple
 
 import docutils
 
 from . import rstfmt
 
 
-class DumpVisitor(docutils.nodes.GenericNodeVisitor):
-    def __init__(self, document: docutils.nodes.document, file: Optional[TextIO] = None) -> None:
-        super().__init__(document)
-        self.depth = 0
-        self.file = file or sys.stdout
-
-    def default_visit(self, node: docutils.nodes.Node) -> None:
-        t = type(node).__name__
-        print("    " * self.depth + f"- \x1b[34m{t}\x1b[m", end=" ", file=self.file)
-        if isinstance(node, docutils.nodes.Text):
-            print(repr(node.astext()[:100]), end="", file=self.file)
-        else:
-            print({k: v for k, v in node.attributes.items() if v}, end="", file=self.file)
-        print(file=self.file)
-
-        self.depth += 1
-
-    def default_departure(self, node: docutils.nodes.Node) -> None:
-        self.depth -= 1
+def _dump_lines(node: docutils.nodes.Node) -> Iterator[Tuple[int, str]]:
+    t = type(node).__name__
+    head = f"- \x1b[34m{t}\x1b[m"
+    if isinstance(node, docutils.nodes.Text):
+        body = repr(node.astext()[:100])
+    else:
+        body = str({k: v for k, v in node.attributes.items() if v})
+    yield 0, head + " " + body
+    for c in node.children:
+        for n, l in _dump_lines(c):
+            yield n + 1, l
 
 
 def dump_node(node: docutils.nodes.Node, file: TextIO) -> None:
-    node.walkabout(DumpVisitor(node, file))
+    for indent, line in _dump_lines(node):
+        print("    " * indent + line, file=file)
 
 
 def iter_descendants(node: docutils.nodes.Node) -> Iterator[docutils.nodes.Node]:

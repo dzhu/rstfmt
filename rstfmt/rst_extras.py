@@ -18,20 +18,10 @@ from sphinx.ext import autodoc
 T = TypeVar("T")
 
 
-_new_nodes = []
-
-
-def _new_node(cls: Type[docutils.nodes.Element]) -> Type[docutils.nodes.Element]:
-    _new_nodes.append(cls)
-    return cls
-
-
-@_new_node
 class directive(docutils.nodes.Element):
     pass
 
 
-@_new_node
 class role(docutils.nodes.Element):
     pass
 
@@ -93,9 +83,6 @@ def register() -> None:
         "ref",
     ]:
         roles.register_canonical_role(r, generic_role)
-
-    # Do the magic necessary to allow Docutils visitors to work with our new node subclasses.
-    docutils.nodes._add_node_class_names([cls.__name__ for cls in _new_nodes])
 
     # `list-table` directives are parsed into table nodes by default and could be formatted as such,
     # but that's vulnerable to producing malformed tables when the given column widths are too
