@@ -551,7 +551,15 @@ class Formatters:
 
     @staticmethod
     def Text(node: docutils.nodes.Text, _: FormatContext) -> inline_iterator:
-        yield node.astext()
+        # The rawsource attribute tends not to be set for text nodes not directly under paragraphs.
+        if isinstance(node.parent, docutils.nodes.paragraph):
+            # Any instance of "\ " disappears in the parsing. It may have an effect if it separates
+            # this text from adjacent inline markup, but in that case it will be replaced by the
+            # wrapping algorithm. Other backslashes may be unnecessary (e.g., "a\` b" or "a\b"), but
+            # finding all of those is future work.
+            yield node.rawsource.replace(r"\ ", "")
+        else:
+            yield node.astext()
 
     @staticmethod
     def reference(node: docutils.nodes.reference, ctx: FormatContext) -> inline_iterator:
