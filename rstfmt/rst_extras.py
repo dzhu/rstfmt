@@ -5,7 +5,7 @@ defined here) so we can format them the way they came in without without caring 
 would normally expand to.
 """
 
-from typing import Any, Dict, Iterator, Optional, Type, TypeVar
+from typing import Any, Iterator, List, Tuple, Type, TypeVar
 
 import docutils
 import sphinx.directives
@@ -13,7 +13,6 @@ import sphinx.ext.autodoc.directive
 from docutils.parsers.rst import directives, roles
 from docutils.parsers.rst.directives import parts
 from sphinx.ext import autodoc
-
 
 T = TypeVar("T")
 
@@ -24,6 +23,22 @@ class directive(docutils.nodes.Element):
 
 class role(docutils.nodes.Element):
     pass
+
+
+class ref_role(docutils.nodes.Element):
+    pass
+
+
+class ReferenceRole(sphinx.util.docutils.ReferenceRole):
+    def run(self) -> Tuple[List[docutils.nodes.Node], List[docutils.nodes.system_message]]:
+        node = ref_role(
+            self.rawtext,
+            name=self.name,
+            has_explicit_title=self.has_explicit_title,
+            target=self.target,
+            title=self.title,
+        )
+        return [node], []
 
 
 role_aliases = {
@@ -76,13 +91,15 @@ def register() -> None:
         "rfc-reference",
         "subscript",
         "superscript",
-        # Extensions.
-        "class",
-        "func",
-        "download",
-        "ref",
     ]:
         roles.register_canonical_role(r, generic_role)
+
+    roles.register_canonical_role("download", ReferenceRole())
+    for domain in _subclasses(sphinx.domains.Domain):
+        for name, role_callable in domain.roles.items():
+            if isinstance(role_callable, sphinx.util.docutils.ReferenceRole):
+                roles.register_canonical_role(name, ReferenceRole())
+                roles.register_canonical_role(domain.name + ":" + name, ReferenceRole())
 
     # `list-table` directives are parsed into table nodes by default and could be formatted as such,
     # but that's vulnerable to producing malformed tables when the given column widths are too

@@ -617,6 +617,19 @@ class Formatters:
         yield inline_markup(f":{node.attributes['role']}:`{node.attributes['text']}`")
 
     @staticmethod
+    def ref_role(node: docutils.nodes.Node, ctx: FormatContext) -> inline_iterator:
+        a = node.attributes
+        target = a["target"]
+        if a["has_explicit_title"]:
+            title = a["title"].replace("<", r"\<")
+            # TODO: This is a bit too broad, but not incorrect.
+            title = title.replace("`", r"\`")
+            text = f"{title} <{target}>"
+        else:
+            text = target
+        yield inline_markup(f":{a['name']}:`{text}`")
+
+    @staticmethod
     def inline(node: docutils.nodes.inline, ctx: FormatContext) -> inline_iterator:
         yield from chain(fmt_children(node, ctx))
 
