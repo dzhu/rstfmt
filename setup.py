@@ -7,7 +7,7 @@ with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "README.rst")
 
 setup(
     name="rstfmt",
-    version="0.0.2",
+    version="0.0.3",
     author="Danny Zhu",
     author_email="dzhu@dzhu.us",
     url="https://github.com/dzhu/rstfmt",
