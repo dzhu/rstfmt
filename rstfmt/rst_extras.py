@@ -109,6 +109,7 @@ def register() -> None:
     _add_directive("contents", directives.parts.Contents)
     _add_directive("include", directives.misc.Include)
     _add_directive("toctree", sphinx.directives.other.TocTree)
+    _add_directive("math", directives.body.MathBlock)
 
     for d in set(_subclasses(autodoc.Documenter)):
         if d.objtype != "object":
