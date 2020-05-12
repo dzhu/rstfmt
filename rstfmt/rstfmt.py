@@ -15,15 +15,11 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
-    overload,
 )
 
 import black
 import docutils
 import docutils.parsers.rst
-
-from . import rst_extras
-
 
 T = TypeVar("T")
 

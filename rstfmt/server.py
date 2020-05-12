@@ -1,9 +1,7 @@
 import argparse
 import asyncio
-import enum
 import functools
 import logging
-import sys
 import time
 from concurrent import futures
 

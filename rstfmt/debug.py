@@ -1,5 +1,4 @@
-import sys
-from typing import Iterator, Optional, TextIO, Tuple
+from typing import Iterator, TextIO, Tuple
 
 import docutils
 
