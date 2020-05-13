@@ -1,0 +1,26 @@
+name: test
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: [3.6, 3.7, 3.8]
+    steps:
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Check out
+        uses: actions/checkout@v2
+      - name: Install
+        run: |
+          pip install .
+      - name: Test
+        run: |
+          make test
