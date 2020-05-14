@@ -12,6 +12,9 @@ import sphinx.directives
 import sphinx.ext.autodoc.directive
 from docutils.parsers.rst import directives, roles
 from docutils.parsers.rst.directives import parts
+
+# Import these only to load their domain subclasses.
+from sphinx.domains import c, cpp, python  # noqa: F401
 from sphinx.ext import autodoc
 
 T = TypeVar("T")
