@@ -649,10 +649,6 @@ class Formatters:
             yield from with_spaces(3, text.split("\n"))
 
     @staticmethod
-    def image(node: docutils.nodes.image, ctx: FormatContext) -> line_iterator:
-        yield f".. image:: {node.attributes['uri']}"
-
-    @staticmethod
     def literal_block(node: docutils.nodes.literal_block, ctx: FormatContext) -> line_iterator:
         langs = [c for c in node.attributes["classes"] if c != "code"]
         lang = langs[0] if langs else None
