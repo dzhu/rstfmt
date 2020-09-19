@@ -40,6 +40,9 @@ To get a feel for the output of rstfmt, see `the sample file
    # Read a file from stdin and write the formatted version to stdout.
    rstfmt
 
+   # Exit with a nonzero status code if any files are not formatted.
+   rstfmt --check <file>...
+
    # Format the given files, printing all output to stdout.
    rstfmt <file>...
 
