@@ -18,9 +18,9 @@ reasonable and minimally configurable to prevent teams from wasting time
 on style discussions (or individuals on manually doing formatting, for
 that matter).
 
-Currently, rstfmt is in an *extremely* early stage of development. Not
-all reST constructs are covered and the interface or formatting may
-change at any time without warning.
+Currently, rstfmt is in a very early stage of development. Not all reST
+constructs are covered and the interface or formatting may change at any
+time without warning.
 
 To get a feel for the output of rstfmt, see `the sample file
 <sample.rst>`__.
@@ -31,10 +31,10 @@ To get a feel for the output of rstfmt, see `the sample file
 
 .. code:: sh
 
-   # Install.
+   # Install directly from the repository.
    pip install git+https://github.com/dzhu/rstfmt
 
-   # Install from PyPI (but releases there may be out-of-date).
+   # Install from PyPI.
    pip install rstfmt
 
    # Read a file from stdin and write the formatted version to stdout.
@@ -56,7 +56,8 @@ on every run.
 .. code:: sh
 
    # Install.
-   pip install https://github.com/dzhu/rstfmt[d]
+   pip install 'git+https://github.com/dzhu/rstfmt#egg=rstfmt[d]'
+   pip install 'rstfmt[d]'
 
    # Start the daemon (binds to localhost:5219 by default).
    rstfmtd --bind-host=<host> --bind-port=<port>
