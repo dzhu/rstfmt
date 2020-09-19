@@ -1,7 +1,6 @@
 import argparse
 import contextlib
 import sys
-import warnings
 from typing import Any, ContextManager, TextIO, cast
 
 from . import debug, rst_extras, rstfmt
@@ -21,7 +20,6 @@ class nullcontext(contextlib.AbstractContextManager):  # type: ignore
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--in-place", action="store_true")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("-w", "--width", type=int, default=72)
     parser.add_argument("--check", action="store_true")
@@ -50,6 +48,7 @@ def main() -> None:
                 debug.run_test(doc)
             except AssertionError as e:
                 raise AssertionError(f"Failed consistency test on {fn}!") from e
+            continue
 
         output = rstfmt.format_node(args.width, doc)
 
@@ -58,12 +57,10 @@ def main() -> None:
                 misformatted.append("Standard input" if fn == STDIN else fn)
             continue
 
-        if fn != STDIN and args.in_place:
+        if fn != STDIN:
             cm = open(fn, "w")
         else:
             cm = nullcontext(sys.stdout)
-            if fn == STDIN and args.in_place:
-                warnings.warn("Cannot edit stdin in place; writing to stdout!")
 
         with cm as f:
             f.write(output)
