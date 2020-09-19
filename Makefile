@@ -15,6 +15,7 @@ upload:
 test:
 	rstfmt --check README.rst sample.rst
 	rstfmt --test README.rst sample.rst
+	black --check .
 	find tests -name '*.rst' -print0 | xargs -0 rstfmt --test -v
 
 clean:

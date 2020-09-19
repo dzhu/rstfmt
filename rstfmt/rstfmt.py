@@ -126,7 +126,8 @@ line_iterator = Iterator[str]
 
 
 word_info = namedtuple(
-    "word_info", ["text", "in_markup", "start_space", "end_space", "start_punct", "end_punct"],
+    "word_info",
+    ["text", "in_markup", "start_space", "end_space", "start_punct", "end_punct"],
 )
 
 
@@ -428,7 +429,8 @@ class Formatters:
     @staticmethod
     def block_quote(node: docutils.nodes.block_quote, ctx: FormatContext) -> line_iterator:
         yield from with_spaces(
-            3, chain_intersperse("", fmt_children(node, ctx.indent(3))),
+            3,
+            chain_intersperse("", fmt_children(node, ctx.indent(3))),
         )
 
     @staticmethod

@@ -61,7 +61,10 @@ def generic_role(r: str, rawtext: str, text: str, *_: Any, **__: Any) -> Any:
 
 
 def _add_directive(
-    name: str, cls: Type[docutils.parsers.rst.Directive], *, raw: bool = True,
+    name: str,
+    cls: Type[docutils.parsers.rst.Directive],
+    *,
+    raw: bool = True,
 ) -> None:
     # We create a new class inheriting from the given directive class to automatically pick up the
     # argument counts and most of the other attributes that define how the directive is parsed, so
