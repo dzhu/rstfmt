@@ -92,6 +92,14 @@ standalone and daemon modes:
      :args '("-fsS" "http://localhost:5219" "--data-binary" "@/dev/stdin"))
    (add-hook 'rst-mode-hook #'client-rstfmt-on-save-mode)
 
+With other tools
+==========================
+
+rstfmt is integrated in the following tools
+
+- Mega-Linter_ : Open-Source code quality tool aggregating 70 linters & formatters, `including rstfmt <https://nvuillam.github.io/mega-linter/descriptors/rst_rstfmt/>`__
+
+
 .. _black: https://github.com/psf/black
 
 .. _blackd: https://github.com/psf/black#blackd
@@ -99,6 +107,8 @@ standalone and daemon modes:
 .. _docutils: https://docutils.sourceforge.io/
 
 .. _gofmt: https://blog.golang.org/gofmt
+
+.. _Mega-Linter: https://nvuillam.github.io/mega-linter
 
 .. _pandoc: https://pandoc.org/
 
