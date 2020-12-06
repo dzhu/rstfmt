@@ -301,7 +301,9 @@ class CodeFormatters:
         # tab stops, causing odd spacing in the rendering. Instead, we explicitly convert them into
         # four spaces each, which matches common practice on the Go website. (There are also
         # instances of eight, but not as many, and anyway that looks too wide.)
-        return re.sub("^\t+", lambda m: "    " * len(m.group(0)), code, flags=re.MULTILINE)
+        return re.sub(
+            "^\t+", lambda m: "    " * len(m.group(0)), code.rstrip("\n"), flags=re.MULTILINE
+        )
 
 
 class Formatters:
