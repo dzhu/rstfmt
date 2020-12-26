@@ -119,7 +119,7 @@ jobs:
       name: Submit to coveralls
       run: coveralls
     - name: Check coverage
-      run: coverage report -m --fail-under=100
+      run: cd tests && coverage report -m --fail-under=100
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
