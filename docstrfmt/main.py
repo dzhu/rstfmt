@@ -64,9 +64,8 @@ def parse_pyproject_config(
     context: click.Context, param: click.Parameter, value: Optional[str]
 ) -> Mode:
     if not value:
-        pyproject_toml = find_pyproject_toml(context.params["files"])
-        if pyproject_toml:
-            value = pyproject_toml
+        pyproject_toml = find_pyproject_toml(tuple(context.params.get("files", ())))
+        value = pyproject_toml if pyproject_toml else None
     if value:
         config = parse_pyproject_toml(value)
         config.pop("exclude", None)
@@ -83,7 +82,10 @@ def parse_pyproject_config(
         return Mode(line_length=88, target_versions=PY36_VERSIONS)
 
 
-def parse_sources(sources, exclude, include_txt):
+def parse_sources(context: click.Context, param: click.Parameter, value: Optional[str]):
+    sources = value
+    exclude = context.params.get("exclude", [])
+    include_txt = context.params.get("include_txt", False)
     files_to_format = set()
     extensions = [".py", ".rst"] + ([".txt"] if include_txt else [])
     for source in sources:
@@ -138,6 +140,7 @@ def _get_docstrings_from_node(source, node: Union[FunctionDef, ClassDef]):
         allow_dash=False,
         path_type=str,
     ),
+    is_eager=True,
     callback=parse_pyproject_config,
     help="Path to pyproject.toml. Used to load black settings.",
 )
@@ -219,6 +222,7 @@ def _get_docstrings_from_node(source, node: Union[FunctionDef, ClassDef]):
     "files",
     nargs=-1,
     type=str,
+    callback=parse_sources,
 )
 @click.pass_context
 def main(
@@ -240,7 +244,7 @@ def main(
         reporter.current_level = -1
     manager = Manager(reporter, mode)
     misformatted = set()
-    files_to_format = parse_sources(files, exclude, include_txt)
+    files_to_format = files
 
     if line_length != 88:
         mode.line_length = line_length

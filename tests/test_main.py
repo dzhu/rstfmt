@@ -74,7 +74,7 @@ def test_raw_output(runner, file):
 @pytest.mark.parametrize("verbose", ["-v", "-vv", "-vvv"])
 @pytest.mark.parametrize("file", ["test_files/test_file.rst", "test_files/py_file.py"])
 def test_verbose(runner, verbose, file):
-    args = [verbose, file]
+    args = ["-l", 88, verbose, file]
     result = runner.invoke(main, args=args)
     assert result.exit_code == 0
 
@@ -97,13 +97,11 @@ def test_verbose(runner, verbose, file):
 
 @pytest.mark.parametrize("file", ["test_files/test_file.rst", "test_files/py_file.py"])
 def test_check(runner, file):
-    args = ["-c", "-l", 80, file]
+    args = ["-c", "-l", 80, os.path.abspath(file)]
     result = runner.invoke(main, args=args)
     assert result.exit_code == 1
-    assert (
-        result.output == f"File '{os.path.abspath(file)}' "
-        f"could be reformatted.\n1 out of 1 file could be "
-        f"reformatted.\nDone! 🎉\n"
+    assert result.output.endswith(
+        "could be reformatted.\n1 out of 1 file could be reformatted.\nDone! 🎉\n"
     )
 
 
@@ -132,9 +130,9 @@ def test_quiet(runner):
 def test_globbing(runner, file):
     args = [
         "-e",
-        "**/test_files/bad_table.rst",
+        "test_files/bad_table.rst",
         "-e",
-        "**/test_files/test_errors.rst",
+        "test_files/test_errors.rst",
         "-l",
         80,
         file,
