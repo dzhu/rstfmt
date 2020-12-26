@@ -1,6 +1,32 @@
 docstrfmt: a formatter for reStructuredText doc strings
 =======================================================
 
+.. image:: https://img.shields.io/pypi/v/docstrfmt.svg
+    :alt: Latest docstrfmt Version
+    :target: https://pypi.python.org/pypi/docstrfmt
+
+.. image:: https://img.shields.io/pypi/pyversions/docstrfmt
+    :alt: Supported Python Versions
+    :target: https://pypi.python.org/pypi/docstrfmt
+
+.. image:: https://img.shields.io/pypi/dm/docstrfmt
+    :alt: PyPI - Downloads - Monthly
+    :target: https://pypi.python.org/pypi/docstrfmt
+
+.. image:: https://coveralls.io/repos/github/LilSpazJoekp/docstrfmt/badge.svg?branch=master
+    :alt: Coveralls Coverage
+    :target: https://coveralls.io/github/LilSpazJoekp/docstrfmt?branch=master
+
+.. image:: https://github.com/LilSpazJoekp/docstrfmt/workflows/CI/badge.svg
+    :alt: Github Actions Coverage
+    :target: https://github.com/LilSpazJoekp/docstrfmt/actions?query=branch%3Amaster
+
+.. image:: https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg
+    :alt: Contributor Covenant
+    :target: https://github.com/LilSpazJoekp/docstrfmt/blob/master/CODE_OF_CONDUCT.md
+
+
+
 *Strongly inspired by* rstfmt_ and rustfmt_.
 
 *Highly experimental and unstable. Do not depend on this yet.*
