@@ -1,7 +1,7 @@
 Change Log
 ==========
 
-Unreleased
+1.0.0.pre0
 ----------
 
 - Forked from `dzhu/rstfmt <https://github.com/dzhu/rstfmt>`_

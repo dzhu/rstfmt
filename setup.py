@@ -56,7 +56,6 @@ setup(
     ],
     license="MIT",
     long_description=README,
-    long_description_content_type="text/x-rst",
     packages=["docstrfmt"],
     url="https://github.com/LilSpazJoekp/docstrfmt",
     version=VERSION,

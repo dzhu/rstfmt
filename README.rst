@@ -176,6 +176,8 @@ Instructions derived from `black documentation
 
    3. Uncheck "Auto-save edited files to trigger the watcher" in Advanced Options
 
+.. _rstfmt: https://github.com/dzhu/rstfmt
+
 .. _black: https://github.com/psf/black
 
 .. _blackd: https://github.com/psf/black#blackd
