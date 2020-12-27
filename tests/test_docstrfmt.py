@@ -2,7 +2,7 @@ import pytest
 
 from tests.conftest import run_test
 
-test_lengths = [8, 13, 34, 55, 89, 144, 72, None]
+test_lengths = [8, 13, 34, 55, 89, 144, 72]
 
 
 @pytest.mark.parametrize("length", test_lengths)

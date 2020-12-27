@@ -179,7 +179,6 @@ Lists must always start a new paragraph -- that is, they must appear after a bla
         - yet another sub-list
 
       - another item
-      -
 
 **definition** lists (quickref__)
 
@@ -221,8 +220,8 @@ the same indentation level as a paragraph prior to the preformatted block. For e
 
         Whitespace, newlines, blank lines, and all kinds of markup
           (like *this* or \this) is preserved by literal blocks.
-      Lookie here, I've dropped an indentation level
-      (but not far enough)
+       Lookie here, I've dropped an indentation level
+       (but not far enough)
 
     no more example
 
