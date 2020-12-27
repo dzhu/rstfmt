@@ -75,8 +75,6 @@ class FormatContext:
         return self._replace(section_depth=self.section_depth + 1)
 
     def indent(self, spaces: int):
-        if self.width is None:
-            return self
         return self._replace(width=max(1, self.width - spaces))
 
     def sub_indent(self, subsequent_indent: int):
@@ -545,14 +543,16 @@ class Formatters:
             yield "-"
             return
         if context.current_ordinal:
-            context.bullet = make_enumerator(
-                context.current_ordinal, context.ordinal_format, ("", ".")
-            )
-            context.current_ordinal += 1
+            if context.bullet not in ["-", "*", "+"]:
+                context.bullet = make_enumerator(
+                    context.current_ordinal, context.ordinal_format, ("", ".")
+                )
+                context.current_ordinal += 1
         width = len(context.bullet) + 1
         bullet = context.bullet + " "
         spaces = " " * width
         context = context.indent(width)
+        context.bullet = ""
         for first, child in self._enum_first(
             self._chain_with_line_separator("", self._format_children(node, context))
         ):
@@ -734,10 +734,7 @@ class Formatters:
                 current_row.append(column)
             rows.append(current_row)
         column_count = len(rows[0])
-        if context.width is None:
-            total_width = None
-        else:
-            total_width = context.width - column_count + 1
+        total_width = context.width - column_count + 1
         table_matrix_min = self._generate_table_matrix(context, rows, 1)
         table_matrix_max = self._generate_table_matrix(context, rows, total_width)
         min_col_len = {
