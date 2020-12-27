@@ -86,7 +86,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install .[test]
     - name: Test with pytest
-      run: cd tests && pytest
+      run: pytest
     strategy:
       matrix:
         os: [macOS-latest, ubuntu-latest, windows-latest]
@@ -112,14 +112,14 @@ jobs:
         pip install .[test]
         pip install https://github.com/bboe/coveralls-python/archive/github_actions.zip
     - name: Test with pytest
-      run: cd tests && coverage run --source ../docstrfmt --module pytest
+      run: coverage run --source docstrfmt --module pytest
     - env:
         COVERALLS_PARALLEL: true
         COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       name: Submit to coveralls
       run: coveralls
     - name: Check coverage
-      run: cd tests && coverage report -m --fail-under=100
+      run: coverage report -m --fail-under=100
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]

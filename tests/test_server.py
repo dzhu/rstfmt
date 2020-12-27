@@ -41,7 +41,7 @@ async def test_server(client, length, loop):
     headers = {
         "X-Line-Length": f"{length}",
     }
-    with open("test_files/test_file.rst", "rb") as f:
+    with open("tests/test_files/test_file.rst", "rb") as f:
         data = f.read()
     response = await client.post("/", data=data, headers=headers)
     output = await response.text()
