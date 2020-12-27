@@ -1,5 +1,5 @@
-docstrfmt: a formatter for reStructuredText doc strings
-=======================================================
+docstrfmt: a formatter for Sphinx flavored reStructuredText
+===========================================================
 
 .. image:: https://img.shields.io/pypi/v/docstrfmt.svg
     :alt: Latest docstrfmt Version
@@ -20,12 +20,6 @@ docstrfmt: a formatter for reStructuredText doc strings
 .. image:: https://github.com/LilSpazJoekp/docstrfmt/workflows/CI/badge.svg
     :alt: Github Actions Coverage
     :target: https://github.com/LilSpazJoekp/docstrfmt/actions?query=branch%3Amaster
-
-.. image:: https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg
-    :alt: Contributor Covenant
-    :target: https://github.com/LilSpazJoekp/docstrfmt/blob/master/CODE_OF_CONDUCT.md
-
-
 
 *Strongly inspired by* rstfmt_ and rustfmt_.
 
@@ -61,21 +55,21 @@ Usage
 .. code-block:: sh
 
     # Install.
-    pip install git+https://github.com/LilSpazJoekp/docstrfmt
-
-    # Install from PyPI (but releases there may be out-of-date).
     pip install docstrfmt
+
+    # Install the development version.
+    pip install https://github.com/LilSpazJoekp/docstrfmt/archive/master.zip
 
     # Read a file from stdin and write the formatted version to stdout.
     docstrfmt
 
-    # Format the given files in place.
+    # Format the given file(s) in place.
     docstrfmt <file>...
 
     # Format the given files, printing all output to stdout.
     docstrfmt -o <file>...
 
-    # Wrap paragraphs to the given line length (default 88).
+    # Wrap paragraphs to the given line length where possible (default 88).
     docstrfmt -l <length>
 
 Like Black's blackd_, there is also a daemon that provides formatting via HTTP requests
@@ -84,7 +78,10 @@ to avoid the cost of starting and importing everything on every run.
 .. code-block:: sh
 
     # Install.
-    pip install https://github.com/LilSpazJoekp/docstrfmt[d]
+    pip install "docstrfmt[d]"
+
+    # Install the development version.
+    pip install "https://github.com/LilSpazJoekp/docstrfmt/archive/master.zip#egg=docstrfmt[d]"
 
     # Start the daemon (binds to localhost:5219 by default).
     docstrfmtd --bind-host=<host> --bind-port=<port>
@@ -102,23 +99,78 @@ to avoid the cost of starting and importing everything on every run.
 With editors
 ~~~~~~~~~~~~
 
-The default behavior of reading from stdin and writing to stdout should integrate well
-with other systems, such as on-save hooks in editors. For example, here's a
-configuration for reformatter.el_, including both standalone and daemon modes:
+PyCharm
++++++++
 
-.. code-block:: lisp
+Instructions derived from `black documentation
+<https://black.readthedocs.io/en/stable/editor_integration.html#pycharm-intellij-idea>`_
 
-    ;; Run the standalone tool.
-    (reformatter-define docstrfmt
-      :program "docstrfmt")
-      :args '("-o" "-"))
-    (add-hook 'rst-mode-hook #'docstrfmt-on-save-mode)
+1. Install.
 
-    ;; Query the daemon.
-    (reformatter-define client-docstrfmt
-      :program "curl"
-      :args '("-fsS" "http://localhost:5219" "--data-binary" "@/dev/stdin"))
-    (add-hook 'rst-mode-hook #'client-docstrfmt-on-save-mode)
+   .. code-block:: sh
+
+       pip install "docstrfmt[d]"
+
+2. Locate where `docstrfmt` is installed.
+
+   - On macOS / Linux / BSD:
+
+     .. code-block:: sh
+
+         which docstrfmt
+         # /usr/local/bin/docstrfmt  # possible location
+
+   - On Windows:
+
+     .. code-block:: shell
+
+         where docstrfmt
+         # C:\Program Files\Python39\Scripts\docstrfmt.exe
+
+.. note::
+
+    Note that if you are using a virtual environment detected by PyCharm, this is an
+    unneeded step. In this case the path to `docstrfmt` is
+    `$PyInterpreterDirectory$/docstrfmt`.
+
+3. Open External tools in PyCharm.
+
+   - On macOS:
+
+     `PyCharm -> Preferences -> Tools -> External Tools`
+
+   - On Windows / Linux / BSD:
+
+     `File -> Settings -> Tools -> External Tools`
+
+4. Click the + icon to add a new external tool with the following values:
+
+   - Name: docstrfmt
+   - Description:
+   - Program: <install_location_from_step_2>
+   - Arguments: `"$FilePath$"`
+
+5. Format the currently opened file by selecting `Tools -> External Tools -> docstrfmt`.
+
+   - Alternatively, you can set a keyboard shortcut by navigating to `Preferences or
+     Settings -> Keymap -> External Tools -> External Tools - docstrfmt`.
+
+6. Optionally, run `docstrfmt` on every file save:
+
+   1. Make sure you have the `File Watchers
+      <https://plugins.jetbrains.com/plugin/7177-file-watchers>`_ plugin installed.
+   2. Go to `Preferences or Settings -> Tools -> File Watchers` and click `+` to add a
+      new watcher:
+
+      - Name: docstrfmt
+      - File type: Python
+      - Scope: Project Files
+      - Program: <install_location_from_step_2>
+      - Arguments: `$FilePath$`
+      - Output paths to refresh: `$FilePath$`
+      - Working directory: `$ProjectFileDir$`
+
+   3. Uncheck "Auto-save edited files to trigger the watcher" in Advanced Options
 
 .. _black: https://github.com/psf/black
 
