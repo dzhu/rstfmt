@@ -21,6 +21,10 @@ docstrfmt: a formatter for Sphinx flavored reStructuredText
     :alt: Github Actions Coverage
     :target: https://github.com/LilSpazJoekp/docstrfmt/actions?query=branch%3Amaster
 
+.. image:: https://img.shields.io/badge/Contributor%20Covenant-v2.0%20adopted-ff69b4.svg
+    :alt: Contributor Covenant
+    :target: https://github.com/ilSpazJoekp/docstrfmt/blob/master/CODE_OF_CONDUCT.md
+
 *Strongly inspired by* rstfmt_ and rustfmt_.
 
 *Highly experimental and unstable. Do not depend on this yet.*
