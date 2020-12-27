@@ -545,14 +545,16 @@ class Formatters:
             yield "-"
             return
         if context.current_ordinal:
-            context.bullet = make_enumerator(
-                context.current_ordinal, context.ordinal_format, ("", ".")
-            )
-            context.current_ordinal += 1
+            if context.bullet not in ["-", "*", "+"]:
+                context.bullet = make_enumerator(
+                    context.current_ordinal, context.ordinal_format, ("", ".")
+                )
+                context.current_ordinal += 1
         width = len(context.bullet) + 1
         bullet = context.bullet + " "
         spaces = " " * width
         context = context.indent(width)
+        context.bullet = ""
         for first, child in self._enum_first(
             self._chain_with_line_separator("", self._format_children(node, context))
         ):
