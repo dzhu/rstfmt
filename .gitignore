@@ -5,4 +5,5 @@
 .cache/
 .coverage
 .pytest_cache/
+build/
 dist/
