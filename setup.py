@@ -22,6 +22,7 @@ setup(
     name=PACKAGE_NAME,
     author="Joel Payne",
     author_email="lilspazjoekp@gmail.com",
+    python_requires="~=3.6",
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Environment :: Console",
@@ -38,7 +39,7 @@ setup(
         "Topic :: Software Development :: Documentation",
         "Topic :: Utilities",
     ],
-    description="A formatter for Sphinx flavored reStructuredText",
+    description="A formatter for Sphinx flavored reStructuredText.",
     entry_points={
         "console_scripts": [
             "docstrfmt = docstrfmt.main:main",
@@ -57,7 +58,6 @@ setup(
     long_description=README,
     long_description_content_type="text/x-rst",
     packages=["docstrfmt"],
-    python_requires=">=3.6",
     url="https://github.com/LilSpazJoekp/docstrfmt",
     version=VERSION,
 )

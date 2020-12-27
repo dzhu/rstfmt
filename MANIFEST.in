@@ -1,0 +1,2 @@
+include CHANGES.rst LICENSE.txt README.rst sample.rst
+recursive-include tests/test_files *
