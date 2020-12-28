@@ -32,16 +32,14 @@ class Reporter:
 
     def _log_message(self, message, level, **formatting_kwargs):
         if self.current_level >= level:
-            click.secho(message, **formatting_kwargs)
+            click.secho(message, err=True, **formatting_kwargs)
 
     def debug(self, message, **formatting_kwargs):
         self._log_message(message, 3, bold=False, fg="blue", **formatting_kwargs)
 
     def error(self, message, **formatting_kwargs):
         self.error_count += 1
-        self._log_message(
-            message, -1, bold=False, fg="red", err=True, **formatting_kwargs
-        )
+        self._log_message(message, -1, bold=False, fg="red", **formatting_kwargs)
 
     def print(self, message, level=0, **formatting_kwargs):
         formatting_kwargs.setdefault("bold", level == 0)
