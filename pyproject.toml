@@ -1,2 +1,6 @@
 [tool.black]
+exclude = '/(\.eggs|\.git|\.venv|_build|build|dist)/'
 line-length = 88
+
+[tool.isort]
+profile = "black"

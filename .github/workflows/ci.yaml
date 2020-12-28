@@ -33,6 +33,8 @@ jobs:
       run: flake8 --statistics
     - name: Run flynt
       run: flynt -vdf -tc -ll 1000 .
+    - name: Run isort
+      run: isort -cv .
     strategy:
       matrix:
         os: [macOS-latest, ubuntu-latest, windows-latest]
@@ -62,6 +64,8 @@ jobs:
       run: flake8 --statistics
     - name: Run flynt
       run: flynt -vdf -tc -ll 1000 .
+    - name: Run isort
+      run: isort -cv .
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
