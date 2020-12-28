@@ -176,8 +176,6 @@ Instructions derived from `black documentation
 
    3. Uncheck "Auto-save edited files to trigger the watcher" in Advanced Options
 
-.. _rstfmt: https://github.com/dzhu/rstfmt
-
 .. _black: https://github.com/psf/black
 
 .. _blackd: https://github.com/psf/black#blackd
@@ -189,5 +187,7 @@ Instructions derived from `black documentation
 .. _reformatter.el: https://github.com/purcell/reformatter.el
 
 .. _restructuredtext: https://docutils.sourceforge.io/docs/user/rst/quickstart.html
+
+.. _rstfmt: https://github.com/dzhu/rstfmt
 
 .. _rustfmt: https://github.com/rust-lang/rustfmt

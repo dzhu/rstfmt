@@ -39,6 +39,16 @@ def run_static():
 
     """
     success = True
+    success &= do_process(
+        [
+            "docstrfmt",
+            "-e",
+            "tests/test_files/bad_table.rst",
+            "-e",
+            "tests/test_files/test_errors.rst",
+            ".",
+        ]
+    )
     success &= do_process(["flynt", "-q", "-tc", "-ll", "1000", "."])
     success &= do_process(["black", "."])
     success &= do_process(["flake8", "--exclude=.eggs,.venv"])
