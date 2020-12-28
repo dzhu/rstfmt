@@ -1,8 +1,8 @@
 Change Log
 ==========
 
-Unreleased
-----------
+1.0.1 (2020/12/27)
+------------------
 
 **Changed**
 
@@ -12,13 +12,13 @@ Unreleased
 
 - Fix encoding/decoding errors when opening files on Windows.
 
-1.0.0
------
+1.0.0 (2020/12/26)
+------------------
 
 - First official docstrfmt release!
 
-1.0.0.pre0
-----------
+1.0.0.pre0 (2020/12/26)
+-----------------------
 
 - Forked from `dzhu/rstfmt <https://github.com/dzhu/rstfmt>`_
 - Renamed to docstrfmt
