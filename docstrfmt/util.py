@@ -54,7 +54,6 @@ def make_enumerator(ordinal, sequence, format):
 
 
 def plural(word, count, thousands_separator=True):
-    s = False
     if count == 1:
         s = False
     else:

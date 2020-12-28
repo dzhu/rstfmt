@@ -26,15 +26,9 @@ from docutils.utils import Reporter, new_document
 from . import rst_extras
 from .util import get_code_line, make_enumerator
 
-# from sphinx.util.docutils import new_document
-
-
 T = TypeVar("T")
 
-is_role = re.compile(r"^:(.*?):`(.*?)`$")
 section_chars = "=-~+.'\"`^_*:#"
-
-max_overline_depth = 0
 
 # https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#inline-markup-recognition-rules
 space_chars = set(string.whitespace)
@@ -128,7 +122,7 @@ class CodeFormatters:
             try:
                 compile(code, context.current_file, mode="single")
             except SyntaxError as syntax_error:
-                with open(context.current_file) as f:
+                with open(context.current_file, encoding="utf-8") as f:
                     source = f.read()
                 current_line = get_code_line(source, code)
                 if context.manager.reporter:
