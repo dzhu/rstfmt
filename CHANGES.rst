@@ -1,6 +1,17 @@
 Change Log
 ==========
 
+Unreleased
+----------
+
+**Changed**
+
+- Open files with ``UTF-8`` encoding.
+
+**Fixed**
+
+- Fix encoding/decoding errors when opening files on Windows.
+
 1.0.0
 -----
 
