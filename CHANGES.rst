@@ -1,6 +1,13 @@
 Change Log
 ==========
 
+Unreleased
+----------
+
+**Fixed**
+
+- Fix UnicodeEncodeError in Windows Github Actions jobs.
+
 1.0.1 (2020/12/27)
 ------------------
 
