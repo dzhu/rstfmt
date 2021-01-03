@@ -49,10 +49,11 @@ setup(
     extras_require=extras_requires,
     install_requires=[
         "black>=19.10b0",
+        "click",
+        "docutils",
+        "libcst",
         "sphinx>=2.4.0",
         "tabulate",
-        "docutils",
-        "click",
     ],
     license="MIT",
     long_description=README,

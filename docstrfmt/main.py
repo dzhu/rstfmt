@@ -1,14 +1,14 @@
 import contextlib
 import glob
 import sys
-from ast import ClassDef, Constant, FunctionDef, get_source_segment, parse
-from ast import walk as ast_walk
+from copy import copy
 from os.path import abspath, basename
 from pathlib import Path
 from textwrap import dedent, indent
-from typing import Any, List, Optional, Union
+from typing import TYPE_CHECKING, Any, List, Optional
 
 import click
+import libcst as cst
 from black import (
     PY36_VERSIONS,
     Mode,
@@ -17,21 +17,26 @@ from black import (
     parse_pyproject_toml,
 )
 from click import Context
+from libcst import CSTTransformer, Expr
+from libcst.metadata import ParentNodeProvider, PositionProvider
 
-from docstrfmt import Manager
 from docstrfmt.const import __version__
-from docstrfmt.util import get_code_line, plural
+from docstrfmt.debug import dump_node
+from docstrfmt.docstrfmt import Manager
+from docstrfmt.exceptions import InvalidRstErrors
+from docstrfmt.util import plural
 
-from . import debug
+if TYPE_CHECKING:  # pragma: no cover
+    from libcst import AssignTarget, ClassDef, FunctionDef, Module, SimpleString
 
 
 class Reporter:
-    def __init__(self, current_level=1):
-        self.current_level = current_level
+    def __init__(self, level=1):
+        self.level = level
         self.error_count = 0
 
     def _log_message(self, message, level, **formatting_kwargs):
-        if self.current_level >= level:
+        if self.level >= level:
             click.secho(message, err=True, **formatting_kwargs)
 
     def debug(self, message, **formatting_kwargs):
@@ -58,18 +63,103 @@ class nullcontext(contextlib.AbstractContextManager):  # type: ignore
         pass
 
 
-def _get_docstrings_from_node(source, node: Union[FunctionDef, ClassDef]):
-    if not node.body:  # pragma: no cover
-        return []
-    nodes = []
-    for body in node.body:
-        if hasattr(body, "value"):
-            body = body.value
-            if isinstance(body, Constant) and isinstance(body.value, str):
-                segment = get_source_segment(source, body, padded=True)
-                if segment.strip().startswith('"""'):
-                    nodes.append(segment)
-    return nodes
+class Visitor(CSTTransformer):
+    METADATA_DEPENDENCIES = (PositionProvider, ParentNodeProvider)
+
+    def __init__(self, object_name, file, line_length, manager):
+        super().__init__()
+        self._last_assign = None
+        self._object_names = [object_name]
+        self._object_type = None
+        self.file = file
+        self.line_length = line_length
+        self.manager = manager
+        self.misformatted = False
+
+    def _is_docstring(self, node: "SimpleString") -> bool:
+        return node.quote.startswith(('"""', "'''")) and isinstance(
+            self.get_metadata(ParentNodeProvider, node), Expr
+        )
+
+    def leave_ClassDef(self, original_node: "ClassDef", updated_node: "ClassDef"):
+        self._object_names.pop(-1)
+        return updated_node
+
+    def leave_FunctionDef(
+        self, original_node: "FunctionDef", updated_node: "FunctionDef"
+    ):
+        self._object_names.pop(-1)
+        return updated_node
+
+    def leave_SimpleString(
+        self, original_node: "SimpleString", updated_node: "SimpleString"
+    ):
+        if self._is_docstring(original_node):
+            position_meta = self.get_metadata(PositionProvider, original_node)
+            if self._last_assign:
+                self._object_names.append(self._last_assign.target.children[2].value)
+                old_object_type = copy(self._object_type)
+                self._object_type = "attribute"
+            indent_level = position_meta.start.column
+            source = dedent(
+                (" " * indent_level) + original_node.evaluated_value
+            ).rstrip()
+            doc = self.manager.parse_string(self.file, source)
+            if self.manager.reporter.level >= 3:
+                self.manager.reporter.debug("=" * 60)
+                self.manager.reporter.debug(dump_node(doc))
+            width = self.line_length - indent_level
+            if width < 1:
+                raise ValueError(f"Invalid starting width {self.line_length}")
+            output = self.manager.format_node(
+                width, doc, True, len(original_node.prefix + original_node.quote)
+            ).rstrip()
+            output_single_line = len(output.splitlines()) == 1
+            object_display_name = (
+                f'{self._object_type} {".".join(self._object_names)!r}'
+            )
+            if source == output:
+                self.manager.reporter.print(
+                    f"Docstring for {object_display_name} in file {self.file!r} is formatted correctly. Nice!",
+                    1,
+                )
+            else:
+                self.misformatted = True
+                file_link = f'File "{self.file}"'
+                self.manager.reporter.print(
+                    f"Found incorrectly formatted docstring. Docstring for {object_display_name} in {file_link}.",
+                    1,
+                )
+                ending = "\n\n" if not output_single_line else ""
+                value = (
+                    f'{original_node.prefix}"""'
+                    + indent(f'{output}{ending}"""', " " * indent_level).lstrip()
+                )
+                updated_node = updated_node.with_changes(value=value)
+            if self._last_assign:
+                self._last_assign = None
+                self._object_names.pop(-1)
+                self._object_type = old_object_type
+        return updated_node
+
+    def visit_AssignTarget_target(self, node: "AssignTarget") -> None:
+        self._last_assign = node
+
+    def visit_ClassDef(self, node: "ClassDef") -> Optional[bool]:
+        self._object_names.append(node.name.value)
+        self._object_type = "class"
+        self._last_assign = None
+        return True
+
+    def visit_FunctionDef(self, node: "FunctionDef") -> Optional[bool]:
+        self._object_names.append(node.name.value)
+        self._object_type = "function"
+        self._last_assign = None
+        return True
+
+    def visit_Module(self, node: "Module") -> Optional[bool]:
+        self._object_type = "module"
+        return True
 
 
 def _parse_pyproject_config(
@@ -92,138 +182,6 @@ def _parse_pyproject_config(
         return Mode(**config)
     else:
         return Mode(line_length=88, target_versions=PY36_VERSIONS)
-
-
-def _process_python(
-    check,
-    file,
-    input_string,
-    line_length,
-    manager,
-    misformatted,
-    raw_output,
-    reporter,
-    verbose,
-):
-    file_ast = parse(input_string, filename=basename(file))
-    replacements = []
-    current_class = ""
-    for node in ast_walk(file_ast):
-        if isinstance(node, ClassDef):
-            current_class = node.name
-        if isinstance(node, (ClassDef, FunctionDef)):
-            if isinstance(node, ClassDef):
-                in_class = True
-            else:
-                in_class = False
-            doc_strings = _get_docstrings_from_node(input_string, node)
-            multiple_docstrings = len(doc_strings) > 1
-            for doc_string_num, doc_string in enumerate(doc_strings, 1):
-                node_name = (
-                    f"{current_class}.{node.name}" if current_class else node.name
-                )
-                quotes = 'r"""' if doc_string.lstrip().startswith("r") else '"""'
-                if "\n" not in doc_string:  # skip formatting if single line
-                    continue
-                spaces = len(doc_string.split(quotes)[0])
-                source = (
-                    dedent(doc_string)[:-3].strip().lstrip("r \n").lstrip('"').strip()
-                )
-                doc = manager.parse_string(source)
-                if verbose >= 3:
-                    reporter.debug("=" * 60)
-                    reporter.debug(debug.dump_node(doc))
-                width = line_length - spaces
-                if width < 1:
-                    raise ValueError(f"Invalid starting width {line_length}")
-                output = manager.format_node(file, width, doc).rstrip()
-                if source == output:
-                    reporter.print(
-                        f"Docstring{f' {doc_string_num}' if multiple_docstrings else ''} for {'class' if in_class else 'function'} {node.name if in_class else node_name!r} in file {file!r} is formatted correctly. Nice!",
-                        1,
-                    )
-                    if raw_output:
-                        _write_output(
-                            file,
-                            reporter,
-                            input_string,
-                            nullcontext(sys.stdout),
-                            raw_output,
-                        )
-                        return misformatted
-                else:
-                    docstring_line = get_code_line(input_string, output)
-                    misformatted.add(file)
-                    reporter.print(
-                        f'Found incorrectly formatted docstring in {"class" if in_class else "function"} {node.name if in_class else node_name!r} in File "{file}", line {docstring_line}',
-                        1,
-                    )
-                    replacements.append(
-                        (
-                            doc_string,
-                            indent(f'{quotes}{output}\n\n"""', " " * spaces),
-                        )
-                    )
-    if replacements:
-        if check and not raw_output:
-            reporter.print(f"File {file!r} could be reformatted.")
-        else:
-            for replacement in replacements:
-                input_string = input_string.replace(*replacement)
-            _write_output(
-                file,
-                reporter,
-                input_string,
-                (
-                    nullcontext(sys.stdout)
-                    if file == "-" or raw_output
-                    else open(file, "w", encoding="utf-8")
-                ),
-                raw_output,
-            )
-    return misformatted
-
-
-def _process_rst(
-    check,
-    file,
-    input_string,
-    line_length,
-    manager,
-    misformatted,
-    raw_output,
-    reporter,
-    verbose,
-):
-    doc = manager.parse_string(input_string)
-    if verbose >= 3:
-        reporter.debug("=" * 60)
-        reporter.debug(debug.dump_node(doc))
-    output = manager.format_node(file, line_length, doc)
-    if output == input_string:
-        reporter.print(f"File {file!r} is formatted correctly. Nice!", 1)
-        if raw_output:
-            _write_output(
-                file, reporter, input_string, nullcontext(sys.stdout), raw_output
-            )
-            return misformatted
-    else:
-        misformatted.add(file)
-        if check and not raw_output:
-            reporter.print(f"File {file!r} could be reformatted.")
-        else:
-            _write_output(
-                file,
-                reporter,
-                output,
-                (
-                    nullcontext(sys.stdout)
-                    if file == "-" or raw_output
-                    else open(file, "w", encoding="utf-8")
-                ),
-                raw_output,
-            )
-    return misformatted
 
 
 def _parse_sources(
@@ -257,6 +215,76 @@ def _parse_sources(
             if f in files_to_format:
                 files_to_format.remove(f)
     return sorted(list(files_to_format))
+
+
+def _process_python(
+    check, file, input_string, line_length, manager, misformatted, raw_output
+):
+    filename = basename(file)
+    object_name = filename.split(".")[0]
+    visitor = Visitor(object_name, file, line_length, manager)
+    module = cst.parse_module(input_string)
+    wrapper = cst.MetadataWrapper(module)
+    result = wrapper.visit(visitor)
+    if visitor.misformatted:
+        misformatted.add(file)
+        if check and not raw_output:
+            manager.reporter.print(f"File {file!r} could be reformatted.")
+        else:
+            _write_output(
+                file,
+                manager.reporter,
+                result.code,
+                (
+                    nullcontext(sys.stdout)
+                    if file == "-" or raw_output
+                    else open(file, "w", encoding="utf-8")
+                ),
+                raw_output,
+            )
+    elif raw_output:
+        _write_output(
+            file, manager.reporter, input_string, nullcontext(sys.stdout), raw_output
+        )
+    return misformatted
+
+
+def _process_rst(
+    check, file, input_string, line_length, manager, misformatted, raw_output
+):
+    doc = manager.parse_string(file, input_string)
+    if manager.reporter.level >= 3:
+        manager.reporter.debug("=" * 60)
+        manager.reporter.debug(dump_node(doc))
+    output = manager.format_node(line_length, doc)
+    if output == input_string:
+        manager.reporter.print(f"File {file!r} is formatted correctly. Nice!", 1)
+        if raw_output:
+            _write_output(
+                file,
+                manager.reporter,
+                input_string,
+                nullcontext(sys.stdout),
+                raw_output,
+            )
+            return misformatted
+    else:
+        misformatted.add(file)
+        if check and not raw_output:
+            manager.reporter.print(f"File {file!r} could be reformatted.")
+        else:
+            _write_output(
+                file,
+                manager.reporter,
+                output,
+                (
+                    nullcontext(sys.stdout)
+                    if file == "-" or raw_output
+                    else open(file, "w", encoding="utf-8")
+                ),
+                raw_output,
+            )
+    return misformatted
 
 
 def _write_output(file, reporter, output, output_manager, raw):
@@ -383,7 +411,7 @@ def main(
         reporter.error("ValueError: stdin can not be used with other paths")
         context.exit(2)
     if quiet or raw_output or files == ["-"]:
-        reporter.current_level = -1
+        reporter.level = -1
     manager = Manager(reporter, mode)
     misformatted = set()
 
@@ -393,30 +421,19 @@ def main(
     if raw_input:
         file = "<raw_input>"
         check = False
-        if file_type == "py":
-            misformatted = _process_python(
-                check,
-                file,
-                raw_input,
-                line_length,
-                manager,
-                misformatted,
-                True,
-                reporter,
-                verbose,
-            )
-        elif file_type == "rst":
-            misformatted = _process_rst(
-                check,
-                file,
-                raw_input,
-                line_length,
-                manager,
-                misformatted,
-                True,
-                reporter,
-                verbose,
-            )
+        try:
+            if file_type == "py":
+                misformatted = _process_python(
+                    check, file, raw_input, line_length, manager, misformatted, True
+                )
+            elif file_type == "rst":
+                misformatted = _process_rst(
+                    check, file, raw_input, line_length, manager, misformatted, True
+                )
+        except InvalidRstErrors as errors:
+            reporter.error(str(errors))
+            context.exit(1)
+
         context.exit(0)
     line_length = mode.line_length
     for file in files:
@@ -437,8 +454,6 @@ def main(
                     manager,
                     misformatted,
                     raw_output,
-                    reporter,
-                    verbose,
                 )
             elif file.endswith(("rst", "txt") if include_txt else "rst") or file == "-":
                 misformatted = _process_rst(
@@ -449,9 +464,10 @@ def main(
                     manager,
                     misformatted,
                     raw_output,
-                    reporter,
-                    verbose,
                 )
+        except InvalidRstErrors as errors:
+            reporter.error(str(errors))
+            reporter.print(f"Failed to format {file!r}")
         except Exception as error:
             reporter.error(f"{error.__class__.__name__}: {error}")
             reporter.print(f"Failed to format {file!r}")

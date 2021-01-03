@@ -43,9 +43,9 @@ def run_static():
         [
             "docstrfmt",
             "-e",
-            "tests/test_files/bad_table.rst",
+            "tests/test_files/test_invalid*",
             "-e",
-            "tests/test_files/test_errors.rst",
+            "tests/test_files/py_file_error*.py",
             ".",
         ]
     )

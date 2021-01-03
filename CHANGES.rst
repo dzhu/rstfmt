@@ -1,6 +1,26 @@
 Change Log
 ==========
 
+Unreleased
+----------
+
+**Added**
+
+- Support for asynchronous functions.
+
+**Changed**
+
+- Python file parsing now uses `libcst <https://libcst.readthedocs.io/en/latest>`_.
+- When misformatted files are found, location info is printed with the line where the
+  error is found if possible.
+
+**Fixed**
+
+- Incorrect wrapping when formatting the first line of a docstring. Quotes at the
+  beginning of docstrings are now accounted for.
+- Bug where some raw docstrings were not being formatted.
+- Bug where some syntax errors in python blocks were not caught.
+
 1.0.2 (2020/12/27)
 ------------------
 

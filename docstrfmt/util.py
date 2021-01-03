@@ -12,11 +12,10 @@ def get_code_line(current_source, code):
                 for offset, sub_line in enumerate(code_lines):
                     if sub_line not in lines[line_number - 1 + offset]:
                         break
-                else:  # pragma: no cover
-                    return line_number  # not sure how to cover this
-                continue  # pragma: no cover
-            return line_number
-    return None
+                else:
+                    return line_number
+            else:
+                return line_number
 
 
 # Modified from docutils.parsers.rst.states.Body

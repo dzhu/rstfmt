@@ -7,6 +7,10 @@ test = "value"
 class ExampleClass:
     """Class docstring example
 
+    .. codeblock:: python
+
+        invalid
+
     Test table
 
     ===== ================ ======================================================================================================
@@ -35,10 +39,10 @@ class ExampleClass:
     def __init__(self, *args, **kwargs):
         """First doc str"""
 
-        self.test = "value"
+        self.test = "test"
         """Test attr docstring
 
-        .. code-block:: python
+        .. codeblock:: python
 
             print("Hello world")
 
@@ -46,12 +50,11 @@ class ExampleClass:
 
         """
 
-        self.test2 = "value"
-        r"""Duis vel nulla ac risus semper fringilla vel non mauris. In
-        :func:`elementum`\ s viverra arcu sed commodo. In hac habitasse platea dictumst.
-        Integer posuere ullamcorper eros ac gravida. Nam non ligula ipsum. Nam accumsan
-        |subs|__ ex, nec |ultrices| est vestibulum__ in. Vestibulum vitae gravida lorem,
-        vel laoreet lorem.
+        self.test2 = "test"
+        r"""Duis vel nulla ac risus semper fringilla vel non mauris. In :func:`elementum`\ s viverra
+        arcu sed commodo. In hac habitasse platea dictumst. Integer posuere ullamcorper
+        eros ac gravida. Nam non ligula ipsum. Nam accumsan |subs|__ ex, nec |ultrices|
+        est vestibulum__ in. Vestibulum vitae gravida lorem, vel laoreet lorem.
 
         .. |subs| replace:: ``SUBS``
 

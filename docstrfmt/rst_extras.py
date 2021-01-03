@@ -1,8 +1,8 @@
-"""
-This module handles adding constructs to the reST parser in a way that makes sense for docstrfmt.
-Nonstandard directives and roles are inserted into the tree unparsed (wrapped in custom node classes
-defined here) so we can format them the way they came in without without caring about what they
-would normally expand to.
+"""This module handles adding constructs to the reST parser in a way that makes sense
+for docstrfmt. Nonstandard directives and roles are inserted into the tree unparsed
+(wrapped in custom node classes defined here) so we can format them the way they came in
+without without caring about what they would normally expand to.
+
 """
 
 from typing import Any, Iterator, List, Tuple, Type, TypeVar
