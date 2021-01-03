@@ -49,7 +49,7 @@ def run_static():
             ".",
         ]
     )
-    success &= do_process(["flynt", "-q", "-tc", "-ll", "1000", "."])
+    success &= do_process(["flynt", "-q", "-ll", "1000", "."])
     success &= do_process(["isort", "."])
     success &= do_process(["black", "."])
     success &= do_process(["flake8", "--exclude=.eggs,.venv"])

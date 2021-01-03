@@ -18,6 +18,7 @@ from typing import (
 
 import black
 import docutils
+from blib2to3.pgen2.tokenize import TokenError
 from docutils.frontend import OptionParser
 from docutils.nodes import pending
 from docutils.parsers import rst
@@ -116,10 +117,11 @@ word_info = namedtuple(
 
 
 class CodeFormatters:
-    def python(self, code: str, context: FormatContext) -> str:
+    @staticmethod
+    def python(code: str, context: FormatContext) -> str:
         try:
             code = black.format_str(code, mode=context.black_config).rstrip()
-        except (UserWarning, black.InvalidInput):
+        except (UserWarning, black.InvalidInput, TokenError):
             try:
                 compile(code, context.current_file, mode="exec")
             except SyntaxError as syntax_error:
@@ -587,7 +589,7 @@ class Formatters:
         if context.is_docstring:
             context.is_docstring = False
             wrap_text_context.is_docstring = False
-            wrap_text_context = wrap_text_context.wrap_first_at(context.quote_length)
+            wrap_text_context = wrap_text_context.with_width(None)
         yield from self._wrap_text(
             context.width,
             chain(
@@ -891,7 +893,7 @@ class IgnoreMessagesReporter(Reporter):
 
 
 class Manager:
-    def __init__(self, reporter, black_config=None):
+    def __init__(self, reporter, black_config=None, docstring_trailing_line=True):
         rst_extras.register()
         self.black_config = black_config
         self.reporter = reporter
@@ -903,6 +905,7 @@ class Manager:
         self.settings.tab_width = 8
         self.formatters = Formatters(self)
         self.current_file = None
+        self.docstring_trailing_line = docstring_trailing_line
 
     def _pre_process(self, node: docutils.nodes.Node, source: str) -> None:
         """Do some node preprocessing that is generic across node types and is therefore
@@ -960,9 +963,7 @@ class Manager:
         for child in node.children:
             self._pre_process(child, source)
 
-    def format_node(
-        self, width, node: docutils.nodes.Node, is_docstring=False, quote_length=0
-    ) -> str:
+    def format_node(self, width, node: docutils.nodes.Node, is_docstring=False) -> str:
         return (
             "\n".join(
                 self.perform_format(
@@ -973,7 +974,6 @@ class Manager:
                         manager=self,
                         black_config=self.black_config,
                         is_docstring=is_docstring,
-                        quote_length=quote_length,
                     ),
                 )
             )

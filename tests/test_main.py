@@ -27,6 +27,20 @@ def test_check(runner, file):
     )
 
 
+@pytest.mark.parametrize("flag", [True, False])
+def test_docstring_trailing_line(runner, flag):
+    args = [
+        f'--{"" if flag else "no-"}docstring-trailing-line',
+        "tests/test_files/py_file.py",
+    ]
+    result = runner.invoke(main, args=args)
+    assert result.exit_code == 0
+    if flag:
+        assert result.output == "1 file were checked.\nDone! 🎉\n"
+    else:
+        assert result.output.endswith("1 out of 1 file were reformatted.\nDone! 🎉\n")
+
+
 def test_encoding(runner):
     file = "tests/test_files/test_encoding.rst"
     args = [file]

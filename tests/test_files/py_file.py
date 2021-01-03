@@ -47,11 +47,7 @@ class ExampleClass:
         """
 
         self.test2 = "value"
-        r"""Duis vel nulla ac risus semper fringilla vel non mauris. In
-        :func:`elementum`\ s viverra arcu sed commodo. In hac habitasse platea dictumst.
-        Integer posuere ullamcorper eros ac gravida. Nam non ligula ipsum. Nam accumsan
-        |subs|__ ex, nec |ultrices| est vestibulum__ in. Vestibulum vitae gravida lorem,
-        vel laoreet lorem.
+        r"""Duis :func:`elementum`\ s ac |subs|__ ex, nec |ultrices| est vestibulum__.
 
         .. |subs| replace:: ``SUBS``
 

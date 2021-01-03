@@ -71,6 +71,7 @@ class Visitor(CSTTransformer):
         self._last_assign = None
         self._object_names = [object_name]
         self._object_type = None
+        self._blank_line = manager.docstring_trailing_line
         self.file = file
         self.line_length = line_length
         self.manager = manager
@@ -111,14 +112,19 @@ class Visitor(CSTTransformer):
             width = self.line_length - indent_level
             if width < 1:
                 raise ValueError(f"Invalid starting width {self.line_length}")
-            output = self.manager.format_node(
-                width, doc, True, len(original_node.prefix + original_node.quote)
-            ).rstrip()
-            output_single_line = len(output.splitlines()) == 1
+            output = self.manager.format_node(width, doc, True).rstrip()
             object_display_name = (
                 f'{self._object_type} {".".join(self._object_names)!r}'
             )
-            if source == output:
+            single_line = len(output.splitlines()) == 1
+            original_strip = original_node.evaluated_value.rstrip(" ")
+            end_line_count = len(original_strip) - len(original_strip.rstrip("\n"))
+            ending = "" if single_line else "\n\n" if self._blank_line else "\n"
+            if single_line:
+                correct_ending = 0 == end_line_count
+            else:
+                correct_ending = int(self._blank_line) + 1 == end_line_count
+            if source == output and correct_ending:
                 self.manager.reporter.print(
                     f"Docstring for {object_display_name} in file {self.file!r} is formatted correctly. Nice!",
                     1,
@@ -130,11 +136,9 @@ class Visitor(CSTTransformer):
                     f"Found incorrectly formatted docstring. Docstring for {object_display_name} in {file_link}.",
                     1,
                 )
-                ending = "\n\n" if not output_single_line else ""
-                value = (
-                    f'{original_node.prefix}"""'
-                    + indent(f'{output}{ending}"""', " " * indent_level).lstrip()
-                )
+                value = indent(
+                    f'{original_node.prefix}"""{output}{ending}"""', " " * indent_level
+                ).lstrip()
                 updated_node = updated_node.with_changes(value=value)
             if self._last_assign:
                 self._last_assign = None
@@ -384,6 +388,11 @@ def _write_output(file, reporter, output, output_manager, raw):
     is_flag=True,
     help="Don't emit non-error messages to stderr. Errors are still emitted; silence those with 2>/dev/null. Overrides --verbose.",
 )
+@click.option(
+    "--docstring-trailing-line/--no-docstring-trailing-line",
+    default=True,
+    help="Whether or not to add a blank line at the end of docstrings.",
+)
 @click.version_option(version=__version__)
 @click.argument(
     "files",
@@ -404,6 +413,7 @@ def main(
     include_txt: bool,
     exclude: List[str],
     quiet: bool,
+    docstring_trailing_line: bool,
     files: List[str],
 ) -> None:
     reporter = Reporter(verbose)
@@ -412,7 +422,7 @@ def main(
         context.exit(2)
     if quiet or raw_output or files == ["-"]:
         reporter.level = -1
-    manager = Manager(reporter, mode)
+    manager = Manager(reporter, mode, docstring_trailing_line)
     misformatted = set()
 
     if line_length != 88:

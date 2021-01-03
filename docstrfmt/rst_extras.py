@@ -1,7 +1,7 @@
-"""This module handles adding constructs to the reST parser in a way that makes sense
-for docstrfmt. Nonstandard directives and roles are inserted into the tree unparsed
-(wrapped in custom node classes defined here) so we can format them the way they came in
-without without caring about what they would normally expand to.
+"""This module handles adding constructs to the reST parser in a way that makes sense for
+docstrfmt. Nonstandard directives and roles are inserted into the tree unparsed (wrapped
+in custom node classes defined here) so we can format them the way they came in without
+without caring about what they would normally expand to.
 
 """
 
@@ -117,18 +117,19 @@ def register() -> None:
 
     _add_directive("autosummary", autosummary.Autosummary)
     _add_directive("contents", parts.Contents)
-    _add_directive("deprecated", sphinx.directives.other.VersionChange)
-    _add_directive("figure", directives.images.Figure)
+    _add_directive("deprecated", sphinx.directives.other.VersionChange, raw=False)
+    _add_directive("figure", directives.images.Figure, raw=False)
     _add_directive("image", directives.images.Image)
     _add_directive("include", directives.misc.Include)
     _add_directive("list-table", directives.tables.ListTable, raw=False)
     _add_directive("literalinclude", sphinx.directives.code.LiteralInclude)
     _add_directive("math", directives.body.MathBlock)
     _add_directive("raw", directives.misc.Raw)
-    _add_directive("seealso", sphinx.directives.other.SeeAlso)
+    _add_directive("rst-class", sphinx.directives.other.Class)
+    _add_directive("seealso", sphinx.directives.other.SeeAlso, raw=False)
     _add_directive("toctree", sphinx.directives.other.TocTree)
-    _add_directive("versionadded", sphinx.directives.other.VersionChange)
-    _add_directive("versionchanged", sphinx.directives.other.VersionChange)
+    _add_directive("versionadded", sphinx.directives.other.VersionChange, raw=False)
+    _add_directive("versionchanged", sphinx.directives.other.VersionChange, raw=False)
 
     for d in set(_subclasses(autodoc.Documenter)):
         if d.objtype != "object":

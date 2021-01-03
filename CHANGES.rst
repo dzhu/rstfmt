@@ -7,6 +7,7 @@ Unreleased
 **Added**
 
 - Support for asynchronous functions.
+- Ability to remove the blank line at the end of docstrings.
 
 **Changed**
 
@@ -16,10 +17,8 @@ Unreleased
 
 **Fixed**
 
-- Incorrect wrapping when formatting the first line of a docstring. Quotes at the
-  beginning of docstrings are now accounted for.
 - Bug where some raw docstrings were not being formatted.
-- Bug where some syntax errors in python blocks were not caught.
+- Bug where some syntax errors in python blocks were not caught or raised correctly.
 
 1.0.2 (2020/12/27)
 ------------------

@@ -293,7 +293,7 @@ Python code blocks are formatted with Black_ (if it's found on ``PATH``).
 
     figure are like images but with a caption
 
-    and whatever else youwish to add
+    and whatever else you wish to add
 
     .. code-block:: python
 
