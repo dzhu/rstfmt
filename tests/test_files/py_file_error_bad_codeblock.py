@@ -40,9 +40,19 @@ class ExampleClass:
 
         .. code-block:: python
 
-            print("Hello world")
+            x = ["this is valid code"]
+            x = ["this is not valid code]
 
-        ..
+        .. code-block:: python
+
+            x = ["this is valid code"]
+            x = ["this is valid code"]
+
+        .. code-block:: python
+
+            x = ["this is valid code"]
+            x = ["this is not valid code]
+            x = ["this is valid code"]
 
         """
 

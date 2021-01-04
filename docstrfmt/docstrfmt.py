@@ -24,6 +24,7 @@ from docutils.parsers import rst
 from docutils.utils import Reporter, new_document
 
 from . import rst_extras
+from .exceptions import InvalidRstError, InvalidRstErrors
 from .util import get_code_line, make_enumerator
 
 T = TypeVar("T")
@@ -120,14 +121,14 @@ class CodeFormatters:
             code = black.format_str(code, mode=context.black_config).rstrip()
         except (UserWarning, black.InvalidInput):
             try:
-                compile(code, context.current_file, mode="single")
+                compile(code, context.current_file, mode="exec")
             except SyntaxError as syntax_error:
                 with open(context.current_file, encoding="utf-8") as f:
                     source = f.read()
                 current_line = get_code_line(source, code)
                 if context.manager.reporter:
                     context.manager.reporter.error(
-                        f'SyntaxError: {syntax_error.msg}:\n\nFile "{context.current_file}", line {current_line}:\n{syntax_error.text}{" " * (syntax_error.offset - 3)}^'
+                        f'SyntaxError: {syntax_error.msg}:\n\nFile "{context.current_file}", line {current_line}:\n{syntax_error.text}{" " * (syntax_error.offset-1)}^'
                     )
         return code
 
@@ -372,7 +373,7 @@ class Formatters:
         yield ".."
         if node.children:
             text = "\n".join(chain(self._format_children(node, context)))
-            yield from self._with_spaces(4, text.split("\n"))
+            yield from self._with_spaces(4, text.splitlines())
 
     def definition(self, node: docutils.nodes.definition, context) -> line_iterator:
         yield from self._chain_with_line_separator(
@@ -408,7 +409,9 @@ class Formatters:
         if directive.raw:
             yield from self._prepend_if_any("", self._with_spaces(4, directive.content))
         else:
-            sub_doc = self.manager.parse_string("\n".join(directive.content))
+            sub_doc = self.manager.parse_string(
+                context.current_file, "\n".join(directive.content)
+            )
             if sub_doc.children:  # pragma: no cover
                 yield ""  # no idea how to cover this
                 yield from self._with_spaces(
@@ -575,9 +578,16 @@ class Formatters:
             text = func(text, context)
         except (AttributeError, TypeError):
             pass
-        yield from self._with_spaces(4, text.split("\n"))
+        yield from self._with_spaces(4, text.splitlines())
 
-    def paragraph(self, node: docutils.nodes.paragraph, context) -> line_iterator:
+    def paragraph(
+        self, node: docutils.nodes.paragraph, context: FormatContext
+    ) -> line_iterator:
+        wrap_text_context = context.sub_indent(context.subsequent_indent)
+        if context.is_docstring:
+            context.is_docstring = False
+            wrap_text_context.is_docstring = False
+            wrap_text_context = wrap_text_context.wrap_first_at(context.quote_length)
         yield from self._wrap_text(
             context.width,
             chain(
@@ -585,7 +595,7 @@ class Formatters:
                     node, context.sub_indent(context.subsequent_indent)
                 )
             ),
-            context.sub_indent(context.subsequent_indent),
+            wrap_text_context,
         )
 
     def pending(self, node: pending, context) -> inline_iterator:  # pragma: no cover
@@ -881,46 +891,20 @@ class IgnoreMessagesReporter(Reporter):
 
 
 class Manager:
-    def __init__(
-        self,
-        reporter,
-        black_config=None,
-    ):
+    def __init__(self, reporter, black_config=None):
         rst_extras.register()
         self.black_config = black_config
         self.reporter = reporter
         self.settings = OptionParser(components=[rst.Parser]).get_default_values()
         self.settings.smart_quotes = True
-        self.settings.report_level = Reporter.ERROR_LEVEL
-        self.settings.halt_level = Reporter.SEVERE_LEVEL
+        self.settings.report_level = 5
+        self.settings.halt_level = 5
         self.settings.file_insertion_enabled = False
         self.settings.tab_width = 8
         self.formatters = Formatters(self)
+        self.current_file = None
 
-    def perform_format(self, node: docutils.nodes.Node, context) -> Iterator[str]:
-        try:
-            func = getattr(self.formatters, type(node).__name__)
-        except AttributeError:  # pragma: no cover
-            raise ValueError(f"Unknown node type {type(node).__name__}!")
-        return func(node, context)
-
-    def format_node(self, file, width, node: docutils.nodes.Node) -> str:
-        return (
-            "\n".join(
-                self.perform_format(
-                    node,
-                    FormatContext(
-                        width,
-                        current_file=file,
-                        manager=self,
-                        black_config=self.black_config,
-                    ),
-                )
-            )
-            + "\n"
-        )
-
-    def _pre_process(self, node: docutils.nodes.Node) -> None:
+    def _pre_process(self, node: docutils.nodes.Node, source: str) -> None:
         """Do some node preprocessing that is generic across node types and is therefore
         most convenient to do as a simple recursive function rather than as part of the
         big dispatcher class.
@@ -934,8 +918,18 @@ class Manager:
             if isinstance(child, docutils.nodes.system_message)
             and child.attributes["type"] != "INFO"
         ]
-        if errors:  # pragma: no cover
-            raise ValueError("Errors in rst text found.")
+        if errors:
+            raise InvalidRstErrors(
+                [
+                    InvalidRstError(
+                        self.current_file,
+                        error.attributes["type"],
+                        error.line,
+                        error.children[0].children[0],
+                    )
+                    for error in errors
+                ]
+            )
         node.children = [
             child
             for child in node.children
@@ -964,14 +958,42 @@ class Manager:
 
         # Recurse.
         for child in node.children:
-            self._pre_process(child)
+            self._pre_process(child, source)
 
-    def parse_string(self, text: str) -> docutils.nodes.document:
-        doc = new_document("test data", self.settings)
+    def format_node(
+        self, width, node: docutils.nodes.Node, is_docstring=False, quote_length=0
+    ) -> str:
+        return (
+            "\n".join(
+                self.perform_format(
+                    node,
+                    FormatContext(
+                        width,
+                        current_file=self.current_file,
+                        manager=self,
+                        black_config=self.black_config,
+                        is_docstring=is_docstring,
+                        quote_length=quote_length,
+                    ),
+                )
+            )
+            + "\n"
+        )
+
+    def parse_string(self, file_name: str, text: str) -> docutils.nodes.document:
+        self.current_file = file_name
+        doc = new_document(self.current_file, self.settings)
         parser = rst.Parser()
         parser.parse(text, doc)
         doc.reporter = IgnoreMessagesReporter(
             "", self.settings.report_level, self.settings.halt_level
         )
-        self._pre_process(doc)
+        self._pre_process(doc, text)
         return doc
+
+    def perform_format(self, node: docutils.nodes.Node, context) -> Iterator[str]:
+        try:
+            func = getattr(self.formatters, type(node).__name__)
+        except AttributeError:  # pragma: no cover
+            raise ValueError(f"Unknown node type {type(node).__name__}!")
+        return func(node, context)

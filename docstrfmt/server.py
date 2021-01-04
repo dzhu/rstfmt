@@ -24,7 +24,7 @@ async def handler(request) -> web.Response:
     try:
         try:
             text = manager.format_node(
-                "<server_input>", width, manager.parse_string(body)
+                width, manager.parse_string("<server_input>", body)
             )
             resp = web.Response(text=text)
         except docutils.utils.SystemMessage as error:  # pragma: no cover
