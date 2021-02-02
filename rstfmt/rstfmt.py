@@ -88,6 +88,7 @@ class FormatContext(NamedTuple):
     section_depth: int
     width: Optional[int]
     bullet: str
+    bullet2: str
     colwidths: List[int]
     line_block_depth: int
 
@@ -105,8 +106,8 @@ class FormatContext(NamedTuple):
     def with_width(self, w: int) -> "FormatContext":
         return self._replace(width=w)
 
-    def with_bullet(self, bullet: str) -> "FormatContext":
-        return self._replace(bullet=bullet)
+    def with_bullet(self, bullet: str, bullet2: Optional[str] = None) -> "FormatContext":
+        return self._replace(bullet=bullet, bullet2=bullet2 or bullet)
 
     def with_colwidths(self, c: List[int]) -> "FormatContext":
         return self._replace(colwidths=c)
@@ -339,7 +340,8 @@ class Formatters:
     # Basic lists.
     @staticmethod
     def _list(node: docutils.nodes.Node, ctx: FormatContext) -> line_iterator:
-        subs = [list(fmt(c, ctx)) for c in node.children]
+        ctx2 = ctx.with_bullet(ctx.bullet2)
+        subs = [list(fmt(c, ctx2 if i else ctx)) for (i, c) in enumerate(node.children)]
         if any(len(s) > 2 for s in subs):
             yield from chain_intersperse("", subs)
         else:
@@ -351,7 +353,14 @@ class Formatters:
 
     @staticmethod
     def enumerated_list(node: docutils.nodes.enumerated_list, ctx: FormatContext) -> line_iterator:
-        yield from Formatters._list(node, ctx.with_bullet("#."))
+        start = node.attributes.get("start")
+        if start is not None:
+            bullet = f"{start}."
+            bullet2 = "#.".ljust(len(bullet))
+        else:
+            bullet = bullet2 = "#."
+
+        yield from Formatters._list(node, ctx.with_bullet(bullet, bullet2))
 
     @staticmethod
     def list_item(node: docutils.nodes.list_item, ctx: FormatContext) -> line_iterator:
@@ -681,7 +690,7 @@ def fmt(node: docutils.nodes.Node, ctx: FormatContext) -> Iterator[str]:
 def format_node(width: Optional[int], node: docutils.nodes.Node) -> str:
     if width is not None and width <= 0:
         width = None
-    return "\n".join(fmt(node, FormatContext(0, width, "", [], 0))) + "\n"
+    return "\n".join(fmt(node, FormatContext(0, width, "", "", [], 0))) + "\n"
 
 
 def parse_string(s: str) -> docutils.nodes.document:
