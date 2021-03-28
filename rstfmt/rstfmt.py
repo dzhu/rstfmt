@@ -306,6 +306,18 @@ class CodeFormatters:
             "^\t+", lambda m: "    " * len(m.group(0)), code.rstrip("\n"), flags=re.MULTILINE
         )
 
+    @staticmethod
+    def rust(code: str) -> str:
+        try:
+            code = subprocess.run(
+                ["rustfmt"], input=code, stdout=subprocess.PIPE, encoding="utf-8", check=True
+            ).stdout
+        except OSError as e:
+            warnings.warn(str(e))
+        except subprocess.CalledProcessError as e:
+            warnings.warn(f"rustfmt failed: {e.stderr}")
+        return code.rstrip("\n")
+
 
 class Formatters:
     # Basic formatting.
