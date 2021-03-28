@@ -552,6 +552,40 @@ class Formatters:
     tip = _sub_admonition
     warning = _sub_admonition
 
+    # Footnotes.
+    @staticmethod
+    def footnote(node: docutils.nodes.footnote, ctx: FormatContext) -> line_iterator:
+        if node.attributes.get("names"):
+            name = node.attributes["names"][0]
+            if "auto" in node.attributes:
+                name = "#" + name
+        elif node.attributes["auto"] == 1:
+            name = "#"
+        else:
+            name = "*"
+        yield f".. [{name}]"
+        yield ""
+        yield from with_spaces(
+            3,
+            chain_intersperse(
+                "", (fmt(c, ctx) for c in node.children if not isinstance(c, docutils.nodes.label))
+            ),
+        )
+
+    @staticmethod
+    def footnote_reference(
+        node: docutils.nodes.footnote_reference, ctx: FormatContext
+    ) -> inline_iterator:
+        if "refname" in node.attributes:
+            name = node.attributes["refname"]
+            if "auto" in node.attributes:
+                name = "#" + name
+        elif node.attributes["auto"] == 1:
+            name = "#"
+        else:
+            name = "*"
+        yield inline_markup(f"[{name}]_")
+
     # Misc.
     @staticmethod
     def line(node: docutils.nodes.line, ctx: FormatContext) -> line_iterator:
