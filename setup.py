@@ -5,9 +5,13 @@ from setuptools import setup
 with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "README.rst")) as f:
     long_description = f.read()
 
+version = {}
+with open(os.path.join(os.path.abspath(os.path.dirname(__file__)), "rstfmt/_version.py")) as f:
+    exec(f.read(), version)
+
 setup(
     name="rstfmt",
-    version="0.0.8",
+    version=version["__version__"],
     author="Danny Zhu",
     author_email="dzhu@dzhu.us",
     url="https://github.com/dzhu/rstfmt",

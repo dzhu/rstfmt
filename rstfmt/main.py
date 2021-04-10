@@ -4,6 +4,7 @@ import sys
 from typing import Any, ContextManager, TextIO, cast
 
 from . import debug, rst_extras, rstfmt
+from ._version import __version__
 
 
 # Define this here to support Python <3.7.
@@ -24,8 +25,13 @@ def main() -> None:
     parser.add_argument("-w", "--width", type=int, default=72)
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--test", action="store_true")
+    parser.add_argument("--version", action="store_true")
     parser.add_argument("files", nargs="*")
     args = parser.parse_args()
+
+    if args.version:
+        print(f"rstfmt {__version__}")
+        return
 
     rst_extras.register()
 
