@@ -459,8 +459,7 @@ class Formatters:
     @staticmethod
     def directive(node: docutils.nodes.Node, ctx: FormatContext) -> line_iterator:
         d = node.attributes["directive"]
-
-        yield " ".join([f".. {d.name}::", *d.arguments])
+        yield " ".join(chain([[f".. {d.name}::"], chain(a.split() for a in d.arguments)]))
         # Just rely on the order being stable, hopefully.
         for k, v in d.options.items():
             yield f"   :{k}:" if v is None else f"   :{k}: {v}"
@@ -525,32 +524,6 @@ class Formatters:
     @staticmethod
     def table(node: docutils.nodes.table, ctx: FormatContext) -> line_iterator:
         yield from chain_intersperse("", fmt_children(node, ctx))
-
-    # Admonitions.
-    @staticmethod
-    def admonition(node: docutils.nodes.admonition, ctx: FormatContext) -> line_iterator:
-        title = node.children[0]
-        assert isinstance(title, docutils.nodes.title)
-        yield ".. admonition:: " + "".join(wrap_text(None, chain(fmt_children(title, ctx))))
-        yield ""
-        ctx = ctx.indent(3)
-        yield from with_spaces(3, chain_intersperse("", (fmt(c, ctx) for c in node.children[1:])))
-
-    @staticmethod
-    def _sub_admonition(node: docutils.nodes.Node, ctx: FormatContext) -> line_iterator:
-        yield f".. {node.tagname}::"
-        yield ""
-        yield from with_spaces(3, chain_intersperse("", fmt_children(node, ctx.indent(3))))
-
-    attention = _sub_admonition
-    caution = _sub_admonition
-    danger = _sub_admonition
-    error = _sub_admonition
-    hint = _sub_admonition
-    important = _sub_admonition
-    note = _sub_admonition
-    tip = _sub_admonition
-    warning = _sub_admonition
 
     # Footnotes.
     @staticmethod

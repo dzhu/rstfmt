@@ -5,13 +5,13 @@ defined here) so we can format them the way they came in without without caring 
 would normally expand to.
 """
 
-from typing import Any, Iterator, List, Tuple, Type, TypeVar
+import importlib
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, TypeVar
 
 import docutils
 import sphinx.directives
 import sphinx.ext.autodoc.directive
-from docutils.parsers.rst import directives, roles
-from docutils.parsers.rst.directives import parts
+from docutils.parsers.rst import Directive, directives, roles
 
 # Import these only to load their domain subclasses.
 from sphinx.domains import c, cpp, python  # noqa: F401
@@ -64,6 +64,7 @@ def _add_directive(
     name: str,
     cls: Type[docutils.parsers.rst.Directive],
     *,
+    attrs: Optional[Dict] = None,
     raw: bool = True,
 ) -> None:
     # We create a new class inheriting from the given directive class to automatically pick up the
@@ -78,6 +79,7 @@ def _add_directive(
         "option_spec": autodoc.directive.DummyOptionSpec(),
         "run": lambda self: [directive(directive=self)],
         "raw": raw,
+        **(attrs or {}),
     }
     directives.register_directive(name, type("rstfmt_" + cls.__name__, (cls,), namespace))
 
@@ -107,18 +109,41 @@ def register() -> None:
                 roles.register_canonical_role(name, ReferenceRole())
                 roles.register_canonical_role(domain.name + ":" + name, ReferenceRole())
 
-    # `list-table` directives are parsed into table nodes by default and could be formatted as such,
-    # but that's vulnerable to producing malformed tables when the given column widths are too
-    # small.
-    _add_directive("list-table", directives.tables.ListTable, raw=False)
+    non_raw_directives = {
+        "admonition",
+        "attention",
+        "caution",
+        "danger",
+        "error",
+        "hint",
+        "important",
+        "note",
+        "tip",
+        "warning",
+        # `list-table` directives are parsed into table nodes by default and could be formatted as
+        # such, but that's vulnerable to producing malformed tables when the given column widths are
+        # too small, so keep them as directives.
+        "list-table",
+    }
 
-    _add_directive("contents", parts.Contents)
-    _add_directive("image", directives.images.Image)
-    _add_directive("include", directives.misc.Include)
+    # The role directive is defined in a rather odd way under the hood: although it appears to take
+    # one argument and allow options, the class actually specifies that it takes no arguments or
+    # options but does have content; it then does its own parsing of arguments and options based on
+    # the content. I'm not entirely sure why, but I think it's to handle the case of using some
+    # exotic base role that has a body or something. I think just taking an argument is pretty much
+    # good enough, though.
+    _add_directive("role", Directive, attrs={"required_arguments": 1})
+    exclude_directives = {"role"}
+
+    for directive_name, (module, cls_name) in directives._directive_registry.items():
+        if directive_name in exclude_directives:
+            continue
+        module = importlib.import_module(f"docutils.parsers.rst.directives.{module}")
+        cls = getattr(module, cls_name)
+        _add_directive(directive_name, cls, raw=directive_name not in non_raw_directives)
+
     _add_directive("literalinclude", sphinx.directives.code.LiteralInclude)
     _add_directive("toctree", sphinx.directives.other.TocTree)
-    _add_directive("math", directives.body.MathBlock)
-    _add_directive("raw", directives.misc.Raw)
 
     for d in set(_subclasses(autodoc.Documenter)):
         if d.objtype != "object":
