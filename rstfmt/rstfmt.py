@@ -736,7 +736,10 @@ def fmt(node: docutils.nodes.Node, ctx: FormatContext) -> Iterator[str]:
 def format_node(width: Optional[int], node: docutils.nodes.Node) -> str:
     if width is not None and width <= 0:
         width = None
-    return "\n".join(fmt(node, FormatContext(0, width, "", "", [], 0))) + "\n"
+    ret = "\n".join(fmt(node, FormatContext(0, width, "", "", [], 0)))
+    if ret:
+        ret += "\n"
+    return ret
 
 
 def parse_string(s: str) -> docutils.nodes.document:
