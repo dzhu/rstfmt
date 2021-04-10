@@ -697,6 +697,28 @@ class Formatters:
 
         yield from with_spaces(3, text.split("\n"))
 
+    @staticmethod
+    def substitution_definition(
+        node: docutils.nodes.substitution_definition, ctx: FormatContext
+    ) -> line_iterator:
+        assert len(node.children) == 1
+        body = node.children[0]
+
+        # Substitution definitions automatically inject an alt attribute equal to the name of the
+        # substitution (see `docutils.states.SubstitutionDef.embedded_directive`), which should be
+        # stripped out here so it doesn't appear unnecessarily. But it's also possible to provide an
+        # explicit alt value, so we need to check whether it actually looks like this was the
+        # automatic one.
+        if body.attributes["directive"].options.get("alt") == node.attributes["names"][0]:
+            del body.attributes["directive"].options["alt"]
+
+        lines = fmt(body, ctx.indent(3))
+        name = node.attributes["names"][0]
+        first = next(lines)
+        assert first.startswith(".. ")
+        yield f".. |{name}| " + first[3:]
+        yield from lines
+
 
 def fmt(node: docutils.nodes.Node, ctx: FormatContext) -> Iterator[str]:
     try:

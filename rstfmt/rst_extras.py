@@ -20,7 +20,7 @@ from sphinx.ext import autodoc
 T = TypeVar("T")
 
 
-class directive(docutils.nodes.Element):
+class directive(docutils.nodes.Element, docutils.nodes.Inline):
     pass
 
 
