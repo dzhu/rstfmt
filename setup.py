@@ -33,6 +33,6 @@ setup(
     install_requires=["black>=19.10b0", "sphinx>=2.4.0"],
     extras_require={"d": ["aiohttp>=3.3.2"]},
     entry_points={
-        "console_scripts": ["rstfmt = rstfmt.main:main", "rstfmtd = rstfmt.server:main [d]"]
+        "console_scripts": ["rstfmt = rstfmt.__main__:main", "rstfmtd = rstfmt.server:main [d]"]
     },
 )
