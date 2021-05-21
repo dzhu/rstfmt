@@ -1,5 +1,7 @@
 import argparse
 import contextlib
+import glob
+import os
 import sys
 from typing import Any, ContextManager, TextIO, cast
 
@@ -56,9 +58,10 @@ def main() -> None:
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("-w", "--width", type=int, default=72)
     parser.add_argument("--check", action="store_true")
+    parser.add_argument("--ext", default="rst")
     parser.add_argument("--test", action="store_true")
     parser.add_argument("--version", action="store_true")
-    parser.add_argument("files", nargs="*")
+    parser.add_argument("paths", nargs="*")
     args = parser.parse_args()
 
     if args.version:
@@ -69,8 +72,12 @@ def main() -> None:
 
     misformatted = []
 
-    for fn in args.files or [STDIN]:
-        do_file(args, fn, misformatted)
+    for path in args.paths or [STDIN]:
+        if os.path.isdir(path):
+            for f in glob.iglob(os.path.join(path, "**", "*." + args.ext), recursive=True):
+                do_file(args, f, misformatted)
+        else:
+            do_file(args, path, misformatted)
 
     if misformatted:
         for fn in misformatted:

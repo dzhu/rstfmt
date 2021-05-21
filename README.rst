@@ -46,6 +46,10 @@ To get a feel for the output of rstfmt, see `the sample file
    # Format the given files in place.
    rstfmt <file>...
 
+   # Format all files with the `rst` or `txt` extension inside a directory.
+   rstfmt <directory>...
+   rstfmt --ext txt <directory>...
+
    # Wrap paragraphs to the given line length (default 72).
    rstfmt -w <width>
 
