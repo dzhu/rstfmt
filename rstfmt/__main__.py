@@ -54,14 +54,29 @@ def do_file(args, fn, misformatted):
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-v", "--verbose", action="store_true")
-    parser.add_argument("-w", "--width", type=int, default=72)
-    parser.add_argument("--check", action="store_true")
-    parser.add_argument("--ext", default="rst")
-    parser.add_argument("--test", action="store_true")
-    parser.add_argument("--version", action="store_true")
-    parser.add_argument("paths", nargs="*")
+    parser = argparse.ArgumentParser(allow_abbrev=False)
+    parser.add_argument("--version", action="store_true", help="show rstfmt version and exit")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="don't update files, but exit with nonzero status if any files are not formatted",
+    )
+    parser.add_argument(
+        "-w", "--width", type=int, default=72, help="the target line length in characters"
+    )
+    parser.add_argument(
+        "--ext",
+        default="rst",
+        help="the extension of files to look at when passed a directory (default `rst`)",
+    )
+    parser.add_argument(
+        "--test", action="store_true", help="[internal] run tests instead of updating files"
+    )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="[internal] print extra debugging information"
+    )
+    parser.add_argument("paths", nargs="*", help="files/directories to run on", metavar="path")
+
     args = parser.parse_args()
 
     if args.version:
