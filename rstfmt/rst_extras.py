@@ -9,7 +9,8 @@ import importlib
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, TypeVar
 
 import docutils
-import sphinx.directives
+import sphinx.directives.code
+import sphinx.directives.other
 import sphinx.ext.autodoc.directive
 from docutils.parsers.rst import Directive, directives, roles
 
