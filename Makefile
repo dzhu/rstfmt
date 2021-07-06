@@ -1,5 +1,3 @@
-SHELL := bash
-
 dist: clean
 	unset stashed; \
 	if [ -n "$$(git status --porcelain --ignored)" ]; then stashed=1; git stash push -qa; fi; \
