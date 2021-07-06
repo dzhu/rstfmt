@@ -1,0 +1,7 @@
+- id: rstfmt
+  name: rstfmt
+  description: 'rstfmt: a formatter for reStructuredText'
+  entry: rstfmt
+  language: python
+  language_version: python3
+  types: [rst]
