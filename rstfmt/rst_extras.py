@@ -15,7 +15,7 @@ import sphinx.ext.autodoc.directive
 from docutils.parsers.rst import Directive, directives, roles
 
 # Import these only to load their domain subclasses.
-from sphinx.domains import c, cpp, python  # noqa: F401
+from sphinx.domains import c, cpp, python, std  # noqa: F401
 from sphinx.ext import autodoc
 
 T = TypeVar("T")
@@ -143,6 +143,7 @@ def register() -> None:
         cls = getattr(module, cls_name)
         _add_directive(directive_name, cls, raw=directive_name not in non_raw_directives)
 
+    _add_directive("glossary", std.Glossary, raw=False)
     _add_directive("literalinclude", sphinx.directives.code.LiteralInclude)
     _add_directive("toctree", sphinx.directives.other.TocTree)
 
