@@ -4,8 +4,6 @@
 
 *Not to be confused with* rustfmt_.
 
-*Highly experimental and unstable. Do not depend on this yet.*
-
 *************
  Description
 *************
@@ -18,7 +16,7 @@ reasonable and minimally configurable to prevent teams from wasting time
 on style discussions (or individuals on manually doing formatting, for
 that matter).
 
-Currently, rstfmt is in a very early stage of development. Not all reST
+Currently, rstfmt is in an early stage of development. Not all reST
 constructs are covered and the interface or formatting may change at any
 time without warning.
 
