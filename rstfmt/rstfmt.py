@@ -668,9 +668,11 @@ class Formatters:
     def target(node: docutils.nodes.target, ctx: FormatContext) -> line_iterator:
         if not isinstance(node.parent, (docutils.nodes.document, docutils.nodes.section)):
             return
-        try:
+        if "refuri" in node.attributes:
             body = " " + node.attributes["refuri"]
-        except KeyError:
+        elif "refname" in node.attributes:
+            body = " " + node.attributes["refname"] + "_"
+        else:
             body = ""
 
         name = "_" if node.attributes.get("anonymous") else node.attributes["names"][0]
