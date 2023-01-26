@@ -18,3 +18,6 @@ test:
 
 clean:
 	rm -rf build/ dist/
+
+test-upload:
+	TWINE_PASSWORD=$$TEST_TWINE_PASSWORD twine upload --repository testpypi dist/*
