@@ -97,7 +97,7 @@ With other tools
 
 rstfmt is integrated in the following tools
 
-- Mega-Linter_ : Open-Source code quality tool aggregating 70 linters & formatters, `including rstfmt <https://nvuillam.github.io/mega-linter/descriptors/rst_rstfmt/>`__
+- Mega-Linter_ : Open-Source code quality tool aggregating 100 linters & formatters, `including rstfmt <https://megalinter.io/latest/descriptors/rst_rstfmt/>`__
 
 
 .. _black: https://github.com/psf/black
@@ -108,7 +108,7 @@ rstfmt is integrated in the following tools
 
 .. _gofmt: https://blog.golang.org/gofmt
 
-.. _Mega-Linter: https://nvuillam.github.io/mega-linter
+.. _MegaLinter: https://megalinter.io
 
 .. _pandoc: https://pandoc.org/
 
