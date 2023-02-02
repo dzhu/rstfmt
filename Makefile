@@ -1,11 +1,13 @@
 dist: clean
 	unset stashed; \
 	if [ -n "$$(git status --porcelain --ignored)" ]; then stashed=1; git stash push -qa; fi; \
-	python setup.py bdist_wheel; \
+	python setup.py sdist bdist_wheel; \
+	python set-tgz-mtimes.py dist/*.tar.gz; \
 	git clean -fdx -e dist; \
 	if [ -n "$$stashed" ]; then git stash pop -q; fi
-	twine check dist/*
 	for f in dist/*.whl; do unzip -l "$$f"; done
+	for f in dist/*.tar.gz; do tar tvf "$$f"; done
+	twine check dist/*
 
 upload:
 	twine upload dist/*
