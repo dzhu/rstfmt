@@ -48,6 +48,9 @@ def do_file(args, fn, misformatted):
             misformatted.append("Standard input" if fn == STDIN else fn)
         return
 
+    if fn != STDIN and output == inp:
+        return
+
     cm = cast(ContextManager[TextIO], nullcontext(sys.stdout) if fn == STDIN else open(fn, "w"))
     with cm as f:
         f.write(output)
