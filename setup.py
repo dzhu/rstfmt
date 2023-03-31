@@ -30,7 +30,7 @@ setup(
     ],
     packages=["rstfmt"],
     python_requires=">=3.7",
-    install_requires=["black>=19.10b0", "docutils>=0.12", "sphinx>=2.4.0"],
+    install_requires=["black>=22.1.0", "docutils>=0.12", "sphinx>=2.4.0"],
     extras_require={"d": ["aiohttp>=3.3.2"]},
     entry_points={
         "console_scripts": ["rstfmt = rstfmt.__main__:main", "rstfmtd = rstfmt.server:main [d]"]
