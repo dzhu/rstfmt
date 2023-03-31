@@ -585,7 +585,10 @@ class Formatters:
             # this text from adjacent inline markup, but in that case it will be replaced by the
             # wrapping algorithm. Other backslashes may be unnecessary (e.g., "a\` b" or "a\b"), but
             # finding all of those is future work.
-            yield node.rawsource.replace(r"\ ", "")
+            if hasattr(node, "rawsource"):
+                yield node.rawsource.replace(r"\ ", "")
+            else:
+                yield node.replace("\x00", "\\").replace(r"\ ", "")
         else:
             yield node.astext()
 
