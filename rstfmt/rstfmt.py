@@ -249,6 +249,13 @@ def preproc(node: docutils.nodes.Node) -> None:
         preproc(c)
 
 
+# Simple reference names can consist of "alphanumerics plus isolated (no two adjacent) internal
+# hyphens, underscores, periods, colons and plus signs", according to
+# https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#reference-names.
+def is_simple_reference_name(name):
+    return re.match("^[-_.:+a-zA-Z0-9]+$", name) and not re.search("[-_.:+][-_.:+]", name)
+
+
 class IgnoreMessagesReporter(docutils.utils.Reporter):
     """
     A Docutils error reporter that ignores some messages.
@@ -616,17 +623,10 @@ class Formatters:
                 yield inline_markup(f"`{title} <{uri}>`{anon_suffix(anonymous)}")
             return
 
-        # Simple reference names can consist of "alphanumerics plus isolated (no two adjacent)
-        # internal hyphens, underscores, periods, colons and plus signs", according to
-        # https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#reference-names.
-        is_single_word = re.match("^[-_.:+a-zA-Z0-9]+$", title) and not re.search(
-            "[-_.:+][-_.:+]", title
-        )
-
         # "x__" is one of the few cases to trigger an explicit "anonymous" attribute (the other
         # being the similar "|x|__", which is already handled above).
         if "anonymous" in attrs:
-            if not is_single_word:
+            if not is_simple_reference_name(title):
                 title = "`" + title + "`"
             yield inline_markup(title + anon_suffix(True))
             return
@@ -636,7 +636,7 @@ class Formatters:
         # Check whether the reference name matches the text and can be made implicit. (Reference
         # names are case-insensitive.)
         if anonymous and ref.lower() == title.lower():
-            if not is_single_word:
+            if not is_simple_reference_name(title):
                 title = "`" + title + "`"
             # "x_" is equivalent to "`x <x_>`__"; it's anonymous despite having a single underscore.
             yield inline_markup(title + anon_suffix(False))
@@ -671,7 +671,10 @@ class Formatters:
         if "refuri" in node.attributes:
             body = " " + node.attributes["refuri"]
         elif "refname" in node.attributes:
-            body = " " + node.attributes["refname"] + "_"
+            refname = node.attributes["refname"]
+            if not is_simple_reference_name(refname):
+                refname = "`" + refname + "`"
+            body = " " + refname + "_"
         else:
             body = ""
 

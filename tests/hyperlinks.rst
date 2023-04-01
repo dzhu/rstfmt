@@ -15,3 +15,7 @@ python_, and `another python`__
 `example but anon <https://www.example.com>`__
 
 links_
+
+.. _indirect multiple: https://www.example.net
+
+.. _multiple: `indirect multiple`_
