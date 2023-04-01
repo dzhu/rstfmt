@@ -108,7 +108,14 @@ def register() -> None:
         for name, role_callable in domain.roles.items():
             if isinstance(role_callable, sphinx.util.docutils.ReferenceRole):
                 roles.register_canonical_role(name, ReferenceRole())
-                roles.register_canonical_role(domain.name + ":" + name, ReferenceRole())
+                roles.register_canonical_role(f"{domain.name}:{name}", ReferenceRole())
+
+        for name, directive_cls in domain.directives.items():
+            _add_directive(f"{domain.name}:{name}", directive_cls)
+
+    # Take the `py` domain as the implicit default. (TODO: Handle files that change the default.)
+    for name, directive_cls in python.PythonDomain.directives.items():
+        _add_directive(name, directive_cls)
 
     non_raw_directives = {
         "admonition",
