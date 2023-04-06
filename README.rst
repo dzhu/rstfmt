@@ -38,8 +38,11 @@ To get a feel for the output of rstfmt, see `the sample file
    # Read a file from stdin and write the formatted version to stdout.
    rstfmt
 
-   # Exit with a nonzero status code if any files are not formatted.
+   # Don't edit any files; exit with a nonzero status code if any files are not formatted.
    rstfmt --check <file>...
+
+   # Print diffs for all files that are not formatted (implies --check).
+   rstfmt --diff <file>...
 
    # Format the given files in place.
    rstfmt <file>...

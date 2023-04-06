@@ -1,5 +1,6 @@
 import argparse
 import contextlib
+import difflib
 import glob
 import os
 import sys
@@ -43,9 +44,9 @@ def do_file(args, fn, misformatted):
 
     output = rstfmt.format_node(args.width, doc)
 
-    if args.check:
+    if args.check or args.diff:
         if output != inp:
-            misformatted.append("Standard input" if fn == STDIN else fn)
+            misformatted.append(("Standard input" if fn == STDIN else fn, inp, output))
         return
 
     if fn != STDIN and output == inp:
@@ -63,6 +64,11 @@ def main() -> None:
         "--check",
         action="store_true",
         help="don't update files, but exit with nonzero status if any files are not formatted",
+    )
+    parser.add_argument(
+        "--diff",
+        action="store_true",
+        help="don't update files, but show a diff of what would change",
     )
     parser.add_argument(
         "-w", "--width", type=int, default=72, help="the target line length in characters"
@@ -98,8 +104,13 @@ def main() -> None:
             do_file(args, path, misformatted)
 
     if misformatted:
-        for fn in misformatted:
-            print(fn, "is not correctly formatted!")
+        for fn, old, new in misformatted:
+            if args.diff:
+                old = old.splitlines(keepends=True)
+                new = new.splitlines(keepends=True)
+                sys.stdout.writelines(difflib.unified_diff(old, new, fromfile=fn, tofile=fn))
+            else:
+                print(fn, "is not correctly formatted!")
         sys.exit(1)
 
 
