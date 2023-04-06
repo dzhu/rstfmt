@@ -1,26 +1,13 @@
 import argparse
-import contextlib
 import difflib
 import glob
 import os
 import sys
+from contextlib import nullcontext
 from typing import Any, ContextManager, TextIO, cast
 
 from . import debug, rst_extras, rstfmt
 from ._version import __version__
-
-
-# Define this here to support Python <3.7.
-class nullcontext(contextlib.AbstractContextManager):  # type: ignore
-    def __init__(self, enter_result: Any = None):
-        self.enter_result = enter_result
-
-    def __enter__(self) -> Any:
-        return self.enter_result
-
-    def __exit__(self, *excinfo: Any) -> Any:
-        pass
-
 
 STDIN = "-"
 
