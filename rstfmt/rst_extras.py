@@ -18,6 +18,14 @@ from docutils.parsers.rst import Directive, directives, roles
 from sphinx.domains import c, cpp, python, std  # noqa: F401
 from sphinx.ext import autodoc
 
+try:
+    import sphinx_tabs.tabs
+
+    HAS_SPHINX_TABS = True
+except ImportError:
+    HAS_SPHINX_TABS = False
+
+
 T = TypeVar("T")
 
 
@@ -132,6 +140,10 @@ def register() -> None:
         # such, but that's vulnerable to producing malformed tables when the given column widths are
         # too small, so keep them as directives.
         "list-table",
+        "tabs",
+        "tab",
+        "group-tab",
+        "code-tab",
     }
 
     # The role directive is defined in a rather odd way under the hood: although it appears to take
@@ -153,6 +165,12 @@ def register() -> None:
     _add_directive("glossary", std.Glossary, raw=False)
     _add_directive("literalinclude", sphinx.directives.code.LiteralInclude)
     _add_directive("toctree", sphinx.directives.other.TocTree)
+
+    if HAS_SPHINX_TABS:
+        _add_directive("tabs", sphinx_tabs.tabs.TabsDirective, raw=False)
+        _add_directive("tab", sphinx_tabs.tabs.TabDirective, raw=False)
+        _add_directive("group-tab", sphinx_tabs.tabs.GroupTabDirective, raw=False)
+        _add_directive("code-tab", sphinx_tabs.tabs.CodeTabDirective)
 
     for d in set(_subclasses(autodoc.Documenter)):
         if d.objtype != "object":
