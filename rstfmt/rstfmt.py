@@ -271,13 +271,25 @@ class IgnoreMessagesReporter(docutils.utils.Reporter):
         "Title overline too short.",
         "Title underline too short.",
     }
+    ignored_messages_regex = (
+        r'No directive entry for "([\w|\-|:]+)"|'
+        r'Unknown directive type "([\w|\-|:]+)"|'
+        r'No role entry for "([\w|\-|:]+)"|'
+        r'Unknown interpreted text role "([\w|\-|:]+)"'
+    )
 
     def system_message(
         self, level: int, message: str, *children: Any, **kwargs: Any
     ) -> docutils.nodes.system_message:
         orig_level = self.halt_level  # type: ignore
-        if message in self.ignored_messages:
+        res = re.search(self.ignored_messages_regex, message)
+
+        # TODO: Add support for sphinx directives after fix
+        # https://github.com/twolfson/restructuredtext-lint/issues/29
+        if res or message in self.ignored_messages:
             self.halt_level = docutils.utils.Reporter.SEVERE_LEVEL + 1
+        else:
+            print(message)
         msg = super().system_message(level, message, *children, **kwargs)
         self.halt_level = orig_level
         return msg
@@ -732,7 +744,10 @@ def fmt(node: docutils.nodes.Node, ctx: FormatContext) -> Iterator[str]:
     try:
         func = getattr(Formatters, type(node).__name__)
     except AttributeError:
+        if type(node) == docutils.nodes.problematic:
+            return [inline_markup(node.rawsource),]
         raise ValueError(f"Unknown node type {type(node).__name__}!")
+
     return func(node, ctx)  # type: ignore
 
 
