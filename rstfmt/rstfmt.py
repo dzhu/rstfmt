@@ -706,6 +706,11 @@ class Formatters:
         yield from with_spaces(3, text.split("\n"))
 
     @staticmethod
+    def doctest_block(node: docutils.nodes.doctest_block, ctx: FormatContext) -> line_iterator:
+        text = "".join(chain(fmt_children(node, ctx)))
+        yield from with_spaces(0, text.split("\n"))
+
+    @staticmethod
     def substitution_definition(
         node: docutils.nodes.substitution_definition, ctx: FormatContext
     ) -> line_iterator:
