@@ -16,7 +16,7 @@ from docutils.parsers.rst import Directive, directives, roles
 
 # Import these only to load their domain subclasses.
 from sphinx.domains import c, cpp, python, std  # noqa: F401
-from sphinx.ext import autodoc
+from sphinx.ext import autodoc, ifconfig
 
 try:
     import sphinx_tabs.tabs
@@ -175,6 +175,8 @@ def register() -> None:
     for d in set(_subclasses(autodoc.Documenter)):
         if d.objtype != "object":
             _add_directive("auto" + d.objtype, autodoc.directive.AutodocDirective, raw=False)
+
+    _add_directive("ifconfig", sphinx.ext.ifconfig.IfConfig, raw=False)
 
     try:
         import sphinxarg.ext
